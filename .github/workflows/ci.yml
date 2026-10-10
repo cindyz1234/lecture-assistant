@@ -27,6 +27,8 @@ jobs:
             fi
             echo "::endgroup::"
           done
+      - name: Build tools
+        run: swift build --package-path Tools
 
   app:
     name: App (iOS + macOS)

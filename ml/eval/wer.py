@@ -23,8 +23,17 @@ SUPPORTED_SUFFIXES = (".txt", ".srt", ".vtt")
 
 _TIMESTAMP_LINE = re.compile(r"^\s*\d{1,2}:\d{2}(:\d{2})?[.,]\d{3}\s*-->")
 _CUE_INDEX_LINE = re.compile(r"^\s*\d+\s*$")
-_BRACKETED = re.compile(r"\[[^\]]*\]|\([^)]*\)")  # [MUSIC], (LAUGHTER), [INAUDIBLE]
+# Caption conventions: "[? word ?]" is an uncertain but spoken word (kept);
+# other square brackets are non-speech annotations like [LAUGHTER] (removed).
+# Parentheses are left alone because they can contain speech, e.g. "A of (x)".
+_UNCERTAIN = re.compile(r"\[\?\s*([^\]]*?)\s*\?\]")
+_ANNOTATION = re.compile(r"\[[^\]]*\]")
+_SPEAKER_LABEL = re.compile(r"^\s*[A-Z][A-Z .'-]{1,30}:\s*")  # PROFESSOR:, AUDIENCE:
+_ORDINAL = re.compile(r"\b(\d+)(?:st|nd|rd|th)\b", re.I)  # 1st, 100th
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
+_SYMBOLS = {"%": " percent ", "+": " plus ", "=": " equals "}
+# Equivalent spellings mapped to one form; applied to whole words after cleanup.
+_SPELLINGS = {"okay": "ok"}
 _NON_WORD = re.compile(r"[^a-z0-9' ]+")
 
 
@@ -37,7 +46,7 @@ def read_transcript(path: Path) -> str:
     for line in lines:
         if line.strip() in ("", "WEBVTT") or _TIMESTAMP_LINE.match(line) or _CUE_INDEX_LINE.match(line):
             continue
-        kept.append(line)
+        kept.append(_SPEAKER_LABEL.sub("", line))
     return " ".join(kept)
 
 
@@ -48,16 +57,20 @@ def _spell_number(match: re.Match[str]) -> str:
 def normalize(text: str) -> str:
     """Normalize text so formatting differences are not counted as errors.
 
-    Lowercases, removes bracketed annotations, spells out numbers, turns
-    hyphens into spaces, drops other punctuation and collapses whitespace.
+    Lowercases, removes [annotations], spells out numbers, ordinals and the
+    symbols % + =, turns hyphens into spaces, drops other punctuation, unifies
+    equivalent spellings and collapses whitespace.
     """
-    text = _BRACKETED.sub(" ", text)
-    text = text.replace("%", " percent")
-    text = _NUMBER.sub(_spell_number, text)
+    text = _UNCERTAIN.sub(r" \1 ", text)
+    text = _ANNOTATION.sub(" ", text)
+    for symbol, words in _SYMBOLS.items():
+        text = text.replace(symbol, words)
+    text = _ORDINAL.sub(lambda match: f" {num2words(int(match.group(1)), to='ordinal')} ", text)
+    text = _NUMBER.sub(lambda match: f" {_spell_number(match)} ", text)  # "3x" -> "three x"
     text = text.lower().replace("-", " ").replace("’", "'")
     text = _NON_WORD.sub(" ", text)
     text = re.sub(r"(?<![a-z])'|'(?![a-z])", " ", text)  # quotes, keep apostrophes in words
-    return " ".join(text.split())
+    return " ".join(_SPELLINGS.get(word, word) for word in text.split())
 
 
 def find_transcripts(directory: Path) -> dict[str, Path]:

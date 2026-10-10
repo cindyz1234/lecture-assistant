@@ -11,6 +11,11 @@ from wer import evaluate, normalize, read_transcript
         ("Hello, World!", "hello world"),
         ("We have 3 vectors.", "we have three vectors"),
         ("Eigen-values [LAUGHTER] of A", "eigen values of a"),
+        ("A of (x) equals [INAUDIBLE] zero", "a of x equals zero"),
+        ("these [? functions ?] are smooth", "these functions are smooth"),
+        ("plus 3x equals 2", "plus three x equals two"),
+        ("u to the 100th power, the 1st and 2nd", "u to the one hundredth power the first and second"),
+        ("Okay, so x + y = 1", "ok so x plus y equals one"),
         ("It's 50% done", "it's fifty percent done"),
         ("  extra   spaces  ", "extra spaces"),
     ],
@@ -26,6 +31,16 @@ def test_read_srt_strips_cues_and_timestamps(tmp_path: Path) -> None:
         "2\n00:00:02,500 --> 00:00:05,000\nToday: matrices.\n"
     )
     assert read_transcript(srt) == "Okay, let's start. Today: matrices."
+
+
+def test_read_captions_strips_speaker_labels(tmp_path: Path) -> None:
+    vtt = tmp_path / "lecture.vtt"
+    vtt.write_text(
+        "WEBVTT\n\n00:00.000 --> 00:02.000\nPROFESSOR: What's the energy?\n\n"
+        "00:02.000 --> 00:04.000\nAUDIENCE: Zero.\n\n"
+        "00:04.000 --> 00:06.000\nSTUDENT: The ground state.\n"
+    )
+    assert read_transcript(vtt) == "What's the energy? Zero. The ground state."
 
 
 def test_read_vtt_strips_header(tmp_path: Path) -> None:
