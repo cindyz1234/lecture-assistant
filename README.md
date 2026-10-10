@@ -14,6 +14,7 @@ Packages/       Swift packages: Shared, AudioCapture, AudioDSP, Transcription,
                 Summarization, Storage, Search
 ml/data/        manifest.csv + download/extract script (no media committed)
 ml/eval/        evaluation scripts (WER, ...)
+Tools/          command-line tools, e.g. `transcribe` for batch evaluation
 docs/           DESIGN.md, RESULTS.md
 project.yml     XcodeGen spec for the app project
 ```
@@ -44,7 +45,18 @@ ML tooling:
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r ml/requirements.txt
 pytest ml
-python3 ml/data/download.py
+python3 ml/data/download.py --split test
+```
+
+Reproduce the ASR baseline (transcribes with the app's pipeline, then scores
+against the OCW captions):
+
+```sh
+swift build -c release --package-path Tools
+Tools/.build/release/transcribe --model base.en --out ml/eval/outputs/base.en ml/data/processed/*.wav
+python3 ml/eval/check_reference.py --ref-dir ml/data/raw --hyp-dir ml/eval/outputs/base.en
+python3 ml/eval/wer.py --ref-dir ml/data/raw --hyp-dir ml/eval/outputs/base.en \
+    --manifest ml/data/manifest.csv --split test
 ```
 
 ## Data and attribution

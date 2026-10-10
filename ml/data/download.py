@@ -12,9 +12,12 @@ import csv
 import shutil
 import subprocess
 import sys
-import urllib.request
+import time
+import urllib.error
 from pathlib import Path
 from urllib.parse import urlparse
+
+from netutil import urlopen
 
 DATA_DIR = Path(__file__).resolve().parent
 MANIFEST = DATA_DIR / "manifest.csv"
@@ -48,15 +51,25 @@ def validate_row(row: dict[str, str]) -> list[str]:
     return problems
 
 
-def download(url: str, destination: Path) -> None:
+def download(url: str, destination: Path, attempts: int = 4) -> None:
     if destination.exists():
         print(f"  exists, skipping: {destination.name}")
         return
     print(f"  downloading {url}")
     partial = destination.with_suffix(destination.suffix + ".part")
-    request = urllib.request.Request(url, headers={"User-Agent": "lecture-assistant-research/0.1"})
-    with urllib.request.urlopen(request) as response, partial.open("wb") as out:
-        shutil.copyfileobj(response, out)
+    for attempt in range(1, attempts + 1):
+        try:
+            with urlopen(url) as response, partial.open("wb") as out:
+                shutil.copyfileobj(response, out)
+            break
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+            # Retry server errors (5xx) and network failures; client errors (4xx) won't fix themselves.
+            is_client_error = isinstance(error, urllib.error.HTTPError) and error.code < 500
+            if is_client_error or attempt == attempts:
+                raise
+            delay = 5 * 2 ** (attempt - 1)
+            print(f"  {error}; retrying in {delay}s ({attempt}/{attempts - 1})")
+            time.sleep(delay)
     partial.rename(destination)
 
 
