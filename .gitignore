@@ -1,0 +1,57 @@
+# --- Media: never commit audio/video (see ml/data/manifest.csv) ---
+*.wav
+*.mp3
+*.m4a
+*.aac
+*.flac
+*.ogg
+*.opus
+*.mp4
+*.mov
+*.m4v
+*.mkv
+*.webm
+*.avi
+ml/data/raw/
+ml/data/processed/
+
+# --- Secrets ---
+.env
+.env.*
+*.pem
+*.key
+*.p12
+.aws/
+credentials
+*.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# --- Xcode / SwiftPM ---
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+.build/
+.swiftpm/
+Package.resolved
+App/Config/Local.xcconfig
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# --- ML artifacts ---
+ml/eval/outputs/
+ml/training/checkpoints/
+*.mlpackage
+*.mlmodelc
+*.safetensors
+*.bin
+*.pt
+
+# --- OS ---
+.DS_Store

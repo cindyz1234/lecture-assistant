@@ -1,0 +1,64 @@
+# Generates LectureAssistant.xcodeproj. Run `xcodegen generate` after editing.
+name: LectureAssistant
+options:
+  bundleIdPrefix: com.cindyzhao
+  deploymentTarget:
+    iOS: "18.0"
+    macOS: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+
+packages:
+  Shared:
+    path: Packages/Shared
+  AudioCapture:
+    path: Packages/AudioCapture
+  AudioDSP:
+    path: Packages/AudioDSP
+  Transcription:
+    path: Packages/Transcription
+  Summarization:
+    path: Packages/Summarization
+  Storage:
+    path: Packages/Storage
+  Search:
+    path: Packages/Search
+
+targets:
+  LectureAssistant:
+    type: application
+    platform: auto
+    scheme: {}
+    supportedDestinations: [iOS, macOS]
+    sources:
+      - App/Sources
+    configFiles:
+      Debug: App/Config/Base.xcconfig
+      Release: App/Config/Base.xcconfig
+    dependencies:
+      - package: Shared
+      - package: AudioCapture
+      - package: Transcription
+      - package: Transcription
+        product: WhisperKitTranscription
+      - package: Storage
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cindyzhao.lectureassistant
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Lecture Assistant
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Lecture Assistant records lectures so it can transcribe them on this device.
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_USER_SELECTED_FILES: readonly
+        # Only used to download the speech model on first launch.
+        ENABLE_OUTGOING_NETWORK_CONNECTIONS: YES
+        CODE_SIGN_STYLE: Automatic

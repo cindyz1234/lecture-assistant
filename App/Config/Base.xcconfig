@@ -1,0 +1,6 @@
+// Shared build settings for the app target.
+//
+// Signing: create App/Config/Local.xcconfig (gitignored) containing
+//   DEVELOPMENT_TEAM = <your team ID>
+// Find the ID in Xcode > Settings > Accounts (your "Personal Team" works).
+#include? "Local.xcconfig"
