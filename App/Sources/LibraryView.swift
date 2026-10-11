@@ -12,27 +12,23 @@ struct LibraryView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $model.selectedLectureID) {
-                ForEach(model.lectures) { lecture in
-                    LectureRow(lecture: lecture, isActive: lecture.id == model.activeLectureID)
-                        .tag(lecture.id)
-                        .contextMenu {
-                            Button("Delete", systemImage: "trash", role: .destructive) {
-                                Task { await model.deleteLecture(lecture.id) }
-                            }
-                            .disabled(lecture.id == model.activeLectureID)
-                        }
-                }
-                .onDelete { offsets in
-                    let ids = offsets.map { model.lectures[$0].id }
-                    Task {
-                        for id in ids {
-                            await model.deleteLecture(id)
-                        }
-                    }
+                if model.isSearchActive {
+                    searchResults
+                } else {
+                    lectureRows
                 }
             }
+            .searchable(text: $model.searchText, placement: .sidebar, prompt: "Search transcripts")
+            // Debounce: search once typing pauses, not on every keystroke.
+            .task(id: model.searchText) {
+                try? await Task.sleep(for: .milliseconds(200))
+                guard !Task.isCancelled else { return }
+                await model.runSearch()
+            }
             .overlay {
-                if model.lectures.isEmpty {
+                if model.isSearchActive, model.searchResults.isEmpty, model.searchedText == model.searchText {
+                    ContentUnavailableView.search(text: model.searchText)
+                } else if !model.isSearchActive, model.lectures.isEmpty {
                     ContentUnavailableView("No Lectures", systemImage: "books.vertical",
                                            description: Text("Imported lectures appear here."))
                 }
@@ -59,6 +55,7 @@ struct LibraryView: View {
         } detail: {
             if let lecture = model.selectedLecture {
                 LectureDetailView(lecture: lecture, model: model)
+                    .id(lecture.id)  // fresh tab and scroll state per lecture
             } else {
                 ContentUnavailableView {
                     Label("No Lecture Selected", systemImage: "waveform")
@@ -86,6 +83,85 @@ struct LibraryView: View {
         }
         .task {
             await model.start()
+        }
+    }
+}
+
+extension LibraryView {
+    @ViewBuilder
+    var lectureRows: some View {
+        ForEach(model.lectures) { lecture in
+            LectureRow(lecture: lecture, isActive: lecture.id == model.activeLectureID)
+                .tag(lecture.id)
+                .contextMenu {
+                    Button("Delete", systemImage: "trash", role: .destructive) {
+                        Task { await model.deleteLecture(lecture.id) }
+                    }
+                    .disabled(lecture.id == model.activeLectureID)
+                }
+        }
+        .onDelete { offsets in
+            let ids = offsets.map { model.lectures[$0].id }
+            Task {
+                for id in ids {
+                    await model.deleteLecture(id)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    var searchResults: some View {
+        Section {
+            ForEach(model.searchResults) { hit in
+                Button {
+                    model.open(hit)
+                } label: {
+                    SearchResultRow(hit: hit)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the lecture at this moment")
+            }
+        } header: {
+            if !model.searchResults.isEmpty {
+                let count = model.searchResults.count
+                Text(count == LibraryViewModel.searchResultLimit ? "Top \(count) results" : "\(count) results")
+            }
+        }
+    }
+}
+
+private struct SearchResultRow: View {
+    let hit: SearchHit
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(hit.lectureTitle)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                Spacer()
+                Text(hit.start.description)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.tint)
+            }
+            Text(highlighted)
+                .font(.callout)
+                .lineLimit(3)
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+    }
+
+    /// The segment text with matched words in bold.
+    private var highlighted: AttributedString {
+        hit.fragments.reduce(into: AttributedString()) { result, fragment in
+            var piece = AttributedString(fragment.text)
+            if fragment.isMatch {
+                piece.inlinePresentationIntent = .stronglyEmphasized
+                piece.foregroundColor = .accentColor
+            }
+            result.append(piece)
         }
     }
 }

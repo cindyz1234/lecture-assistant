@@ -172,6 +172,96 @@ struct LectureStoreContractTests {
         }
     }
 
+    // MARK: - Search
+
+    /// Two lectures with a few segments, for search tests.
+    private func makeSearchFixture(_ implementation: Implementation) async throws -> (any LectureStore, Lecture, Lecture) {
+        let store = try implementation.makeStore()
+        let linear = Lecture(title: "Linear Algebra", createdAt: date(0))
+        let quantum = Lecture(title: "Quantum Physics", createdAt: date(1))
+        try await store.save(linear)
+        try await store.save(quantum)
+        try await store.append([
+            segment(at: 0, "Today we study eigenvalues of a matrix."),
+            segment(at: 1_000, "The determinant tells us when a matrix is singular."),
+        ], to: linear.id)
+        try await store.append([
+            segment(at: 5_000, "Energy eigenvalues of the hydrogen atom."),
+            segment(at: 6_000, "The wave function is normalized."),
+        ], to: quantum.id)
+        return (store, linear, quantum)
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func searchFindsMatchesAcrossLectures(_ implementation: Implementation) async throws {
+        let (store, linear, quantum) = try await makeSearchFixture(implementation)
+
+        let hits = try await store.searchTranscripts("eigenvalues", limit: 10)
+
+        #expect(Set(hits.map(\.lectureID)) == [linear.id, quantum.id])
+        let quantumHit = try #require(hits.first { $0.lectureID == quantum.id })
+        #expect(quantumHit.lectureTitle == "Quantum Physics")
+        #expect(quantumHit.start == LectureTime(milliseconds: 5_000))
+        #expect(quantumHit.text == "Energy eigenvalues of the hydrogen atom.")
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func searchRequiresEveryWordAndMatchesPrefixesIgnoringCase(_ implementation: Implementation) async throws {
+        let (store, linear, _) = try await makeSearchFixture(implementation)
+
+        let hits = try await store.searchTranscripts("EIGEN matr", limit: 10)
+
+        #expect(hits.map(\.lectureID) == [linear.id])
+        #expect(hits.map(\.text) == ["Today we study eigenvalues of a matrix."])
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func searchMarksMatchedWords(_ implementation: Implementation) async throws {
+        let (store, _, _) = try await makeSearchFixture(implementation)
+
+        let hit = try #require(try await store.searchTranscripts("hydrogen", limit: 10).first)
+
+        #expect(hit.fragments.filter(\.isMatch).map(\.text) == ["hydrogen"])
+        #expect(hit.text == "Energy eigenvalues of the hydrogen atom.")
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func searchWithoutWordsOrMatchesReturnsNothing(_ implementation: Implementation) async throws {
+        let (store, _, _) = try await makeSearchFixture(implementation)
+
+        #expect(try await store.searchTranscripts("", limit: 10).isEmpty)
+        #expect(try await store.searchTranscripts("  ?!  ", limit: 10).isEmpty)
+        #expect(try await store.searchTranscripts("spectroscopy", limit: 10).isEmpty)
+        #expect(try await store.searchTranscripts("eigenvalues", limit: 0).isEmpty)
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func searchIgnoresStopwordsUnlessQueryHasNothingElse(_ implementation: Implementation) async throws {
+        let (store, _, quantum) = try await makeSearchFixture(implementation)
+
+        // "what" and "is" appear in no hydrogen segment, but are ignored.
+        #expect(try await store.searchTranscripts("what is hydrogen", limit: 10).map(\.lectureID) == [quantum.id])
+        // A stopword-only query still finds something.
+        #expect(try await !store.searchTranscripts("the", limit: 10).isEmpty)
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func searchRespectsLimit(_ implementation: Implementation) async throws {
+        let (store, _, _) = try await makeSearchFixture(implementation)
+
+        #expect(try await store.searchTranscripts("the", limit: 1).count == 1)
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func deletedLecturesDisappearFromSearch(_ implementation: Implementation) async throws {
+        let (store, linear, quantum) = try await makeSearchFixture(implementation)
+
+        try await store.deleteLecture(quantum.id)
+
+        #expect(try await store.searchTranscripts("eigenvalues", limit: 10).map(\.lectureID) == [linear.id])
+        #expect(try await store.searchTranscripts("hydrogen", limit: 10).isEmpty)
+    }
+
     @Test(arguments: Implementation.allCases)
     func deletingUnknownLectureIsNoOp(_ implementation: Implementation) async throws {
         let store = try implementation.makeStore()
@@ -183,9 +273,9 @@ func date(_ secondsSince1970: TimeInterval) -> Date {
     Date(timeIntervalSince1970: secondsSince1970)
 }
 
-func segment(at ms: Int64) -> TranscriptSegment {
+func segment(at ms: Int64, _ text: String? = nil) -> TranscriptSegment {
     TranscriptSegment(
-        text: "t\(ms)",
+        text: text ?? "t\(ms)",
         start: LectureTime(milliseconds: ms),
         end: LectureTime(milliseconds: ms + 1_000),
         isFinal: true

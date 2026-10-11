@@ -42,6 +42,12 @@ struct LectureDetailView: View {
             .background(.bar)
         }
         .navigationTitle(lecture.title)
+        .onChange(of: model.jumpRequest, initial: true) {
+            guard let request = model.jumpRequest, request.lectureID == lecture.id else { return }
+            tab = .transcript
+            scrollTarget = request.time
+            model.jumpRequest = nil
+        }
         // Reload when switching lectures and when this lecture's transcription ends.
         .task(id: ReloadKey(lectureID: lecture.id, isActive: isActive)) {
             guard !isActive else { return }
@@ -80,7 +86,9 @@ struct LectureDetailView: View {
                     }
                 }
             }
-            .onChange(of: scrollTarget, initial: true) {
+            // Scroll once both the target and the segments are present: a jump from
+            // search can arrive before this lecture's transcript has loaded.
+            .onChange(of: ScrollRequest(target: scrollTarget, segmentCount: segments.count), initial: true) {
                 guard let target = segment(at: scrollTarget) else { return }
                 withAnimation { proxy.scrollTo(target.id, anchor: .center) }
             }
@@ -120,6 +128,11 @@ struct LectureDetailView: View {
 
     private func isHighlighted(_ segment: TranscriptSegment) -> Bool {
         self.segment(at: scrollTarget)?.id == segment.id
+    }
+
+    private struct ScrollRequest: Equatable {
+        let target: LectureTime?
+        let segmentCount: Int
     }
 
     private struct ReloadKey: Equatable {

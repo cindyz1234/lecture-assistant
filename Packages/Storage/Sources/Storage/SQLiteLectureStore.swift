@@ -117,6 +117,65 @@ public final class SQLiteLectureStore: LectureStore {
         }
     }
 
+    public func searchTranscripts(_ query: String, limit: Int) async throws -> [SearchHit] {
+        let terms = SearchTerms(query)
+        // Ranking every match by relevance was the dominant cost for very common
+        // words (165 ms for "the" over 200 hours). Stopword-only queries are
+        // returned unranked, which lets SQLite stop after `limit` rows.
+        let rank = !terms.isStopwordsOnly
+        // FTS5Pattern quotes each word, so user input can't inject FTS5 syntax
+        // (AND, NEAR, quotes, *); it returns nil when there are no words.
+        guard limit > 0, let pattern = FTS5Pattern(matchingAllPrefixesIn: terms.searched.joined(separator: " "))
+        else { return [] }
+        return try await database.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT s.id, s.lectureId, s.startMs, l.title,
+                       highlight(transcriptSegment_ft, 0, char(1), char(2)) AS marked,
+                       bm25(transcriptSegment_ft) AS rank
+                FROM transcriptSegment_ft
+                JOIN transcriptSegment s ON s.rowid = transcriptSegment_ft.rowid
+                JOIN lecture l ON l.id = s.lectureId
+                WHERE transcriptSegment_ft MATCH ?
+                \(rank ? "ORDER BY rank" : "")
+                LIMIT ?
+                """, arguments: [pattern, limit])
+            .map { row in
+                let lectureID: String = row["lectureId"]
+                let segmentID: String = row["id"]
+                guard let lecture = UUID(uuidString: lectureID), let segment = UUID(uuidString: segmentID) else {
+                    throw StorageCorruption.invalidID(UUID(uuidString: lectureID) == nil ? lectureID : segmentID)
+                }
+                return SearchHit(
+                    lectureID: lecture,
+                    lectureTitle: row["title"],
+                    segmentID: segment,
+                    start: LectureTime(milliseconds: row["startMs"]),
+                    fragments: Self.fragments(fromHighlighted: row["marked"]),
+                    // bm25 is lower for better matches; flip it so higher is better.
+                    score: -(row["rank"] as Double)
+                )
+            }
+        }
+    }
+
+    /// Splits FTS5 `highlight()` output, where matches are wrapped in \u{1}…\u{2}.
+    static func fragments(fromHighlighted marked: String) -> [SearchHit.Fragment] {
+        var fragments: [SearchHit.Fragment] = []
+        var isMatch = false
+        var current = ""
+        for character in marked {
+            if character == "\u{1}" || character == "\u{2}" {
+                if !current.isEmpty { fragments.append(SearchHit.Fragment(text: current, isMatch: isMatch)) }
+                current = ""
+                isMatch = character == "\u{1}"
+            } else {
+                current.append(character)
+            }
+        }
+        if !current.isEmpty { fragments.append(SearchHit.Fragment(text: current, isMatch: isMatch)) }
+        return fragments
+    }
+
     public func deleteLecture(_ lectureID: Lecture.ID) async throws {
         // Segments and the summary are removed by ON DELETE CASCADE foreign keys.
         _ = try await database.write { db in

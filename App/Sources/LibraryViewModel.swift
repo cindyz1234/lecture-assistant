@@ -29,6 +29,19 @@ final class LibraryViewModel {
     private(set) var runStats: [Lecture.ID: String] = [:]
     var errorMessage: String?
 
+    /// Search field text; results are for the last completed search.
+    var searchText = ""
+    private(set) var searchResults: [SearchHit] = []
+    /// The text `searchResults` belong to (lags `searchText` while typing).
+    private(set) var searchedText = ""
+    /// A request to show a moment in a lecture's transcript, e.g. from a search result.
+    var jumpRequest: JumpRequest?
+
+    struct JumpRequest: Equatable {
+        let lectureID: Lecture.ID
+        let time: LectureTime
+    }
+
     let store: any LectureStore
     let storageWarning: String?
     let summaries: SummaryController
@@ -157,6 +170,37 @@ final class LibraryViewModel {
         transcriptionTask?.cancel()
     }
 
+    // MARK: - Search
+
+    static let searchResultLimit = 50
+
+    var isSearchActive: Bool {
+        !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// Searches all transcripts for the current `searchText`.
+    func runSearch() async {
+        let text = searchText
+        guard isSearchActive else {
+            searchResults = []
+            searchedText = text
+            return
+        }
+        do {
+            searchResults = try await store.searchTranscripts(text, limit: Self.searchResultLimit)
+        } catch {
+            searchResults = []
+            errorMessage = "Search failed: \(error.localizedDescription)"
+        }
+        searchedText = text
+    }
+
+    /// Opens the lecture containing `hit` at the matching moment.
+    func open(_ hit: SearchHit) {
+        selectedLectureID = hit.lectureID
+        jumpRequest = JumpRequest(lectureID: hit.lectureID, time: hit.start)
+    }
+
     // MARK: - Lectures
 
     func segments(for lectureID: Lecture.ID) async throws -> [TranscriptSegment] {
@@ -168,6 +212,7 @@ final class LibraryViewModel {
         do {
             try await store.deleteLecture(lectureID)
             lectures.removeAll { $0.id == lectureID }
+            searchResults.removeAll { $0.lectureID == lectureID }
             summaries.forget(lectureID)
             if selectedLectureID == lectureID {
                 selectedLectureID = nil
