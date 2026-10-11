@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import MLXSearch
+import MLXSummarization
 import Search
 import Shared
 import Storage
@@ -51,6 +52,15 @@ struct QAEval: AsyncParsableCommand {
 
     @Option(help: "Write per-question results (JSONL) here.")
     var details: String?
+
+    @Flag(help: "Also generate answers with the on-device LLM and score citations and declining.")
+    var answers = false
+
+    @Option(help: "Off-topic questions the lectures don't cover (JSONL), for --answers.")
+    var unanswerable = "ml/eval/qa_unanswerable.jsonl"
+
+    @Option(help: "Write generated answers (JSONL) here, for reading them by hand.")
+    var answersOut: String?
 
     struct Question: Decodable {
         let id: String
@@ -136,6 +146,75 @@ struct QAEval: AsyncParsableCommand {
             print(String(format: "| %@ | %d | %.2f | %.2f | %.2f | %.1f |",
                          mode.rawValue, selected.count, recall1, recall5, mrr, times[times.count / 2]))
         }
+
+        if answers {
+            try await evaluateAnswers(selected, retriever: retriever, lectureIDs: lectureIDs)
+        }
+    }
+
+    struct OffTopicQuestion: Decodable {
+        let id: String
+        let question: String
+    }
+
+    /// Answers every question with the LLM; reports how often it cites the right
+    /// moment, how precise its citations are, and whether it declines off-topic questions.
+    private func evaluateAnswers(_ questions: [Question], retriever: HybridRetriever, lectureIDs: [String: Lecture.ID]) async throws {
+        let clock = ContinuousClock()
+        let generator = try await MLXTextGenerator.load()
+        var answerer = QuestionAnswerer(retriever: retriever, generator: generator)
+        answerer.lectureTitles = Dictionary(uniqueKeysWithValues: lectureIDs.map { ($0.value, $0.key) })
+        let output = answersOut.flatMap { path -> FileHandle? in
+            FileManager.default.createFile(atPath: path, contents: nil)
+            return FileHandle(forWritingAtPath: path)
+        }
+        defer { try? output?.close() }
+        func record(_ fields: [String: Any]) throws {
+            try output?.write(contentsOf: JSONSerialization.data(withJSONObject: fields) + Data("\n".utf8))
+        }
+
+        var answered = 0, citedCorrectly = 0, citations = 0, correctCitations = 0
+        var times: [Double] = []
+        for question in questions {
+            let started = clock.now
+            let answer = try await answerer.answer(question.question)
+            times.append((clock.now - started).seconds)
+            let lectureID = lectureIDs[question.lecture_id]!
+            let correct = answer.citations.filter { citation in
+                answer.passages.contains { retrieved in
+                    retrieved.passage.lectureID == citation.lectureID && retrieved.passage.start == citation.time
+                        && isCorrect(retrieved.passage, lectureID: lectureID, question: question)
+                }
+            }
+            if answer.isAnswered { answered += 1 }
+            if !correct.isEmpty { citedCorrectly += 1 }
+            citations += answer.citations.count
+            correctCitations += correct.count
+            try record(["id": question.id, "question": question.question, "answered": answer.isAnswered,
+                        "answer": answer.text, "citations": answer.citations.map { "[\($0.number)] \(lectureName($0.lectureID, lectureIDs)) \($0.time)" },
+                        "correct_citations": correct.count])
+        }
+
+        let offTopic = try String(contentsOfFile: unanswerable, encoding: .utf8)
+            .split(whereSeparator: \.isNewline)
+            .map { try JSONDecoder().decode(OffTopicQuestion.self, from: Data($0.utf8)) }
+        var declined = 0
+        for question in offTopic {
+            let answer = try await answerer.answer(question.question)
+            if !answer.isAnswered { declined += 1 }
+            try record(["id": question.id, "question": question.question, "answered": answer.isAnswered, "answer": answer.text])
+        }
+
+        let n = Double(questions.count)
+        times.sort()
+        print("")
+        print("| Answers (\(generator.modelID)) | Value |")
+        print("|---|---:|")
+        print(String(format: "| Lecture questions answered | %.2f (%d/%d) |", Double(answered) / n, answered, questions.count))
+        print(String(format: "| Cited a correct passage | %.2f (%d/%d) |", Double(citedCorrectly) / n, citedCorrectly, questions.count))
+        print(String(format: "| Citation precision | %.2f (%d/%d) |", citations > 0 ? Double(correctCitations) / Double(citations) : 0, correctCitations, citations))
+        print(String(format: "| Off-topic questions declined | %.2f (%d/%d) |", Double(declined) / Double(max(offTopic.count, 1)), declined, offTopic.count))
+        print(String(format: "| Median seconds per answer | %.1f |", times[times.count / 2]))
     }
 
     private func isCorrect(_ passage: Passage, lectureID: Lecture.ID, question: Question) -> Bool {

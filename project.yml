@@ -49,6 +49,9 @@ targets:
       - package: Summarization
       - package: Summarization
         product: MLXSummarization
+      - package: Search
+      - package: Search
+        product: MLXSearch
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cindyzhao.lectureassistant

@@ -45,13 +45,16 @@ final class LibraryViewModel {
     let store: any LectureStore
     let storageWarning: String?
     let summaries: SummaryController
+    let qa: QAController
     private var transcriber: WhisperKitWindowTranscriber?
     private var transcriptionTask: Task<Void, Never>?
 
     init(store: any LectureStore, storageWarning: String? = nil) {
         self.store = store
         self.storageWarning = storageWarning
-        self.summaries = SummaryController(store: store)
+        let models = ModelProvider()
+        self.summaries = SummaryController(store: store, models: models)
+        self.qa = QAController(store: store, models: models)
     }
 
     var canImport: Bool {
@@ -163,6 +166,9 @@ final class LibraryViewModel {
                 errorMessage = "Transcription failed: \(error.localizedDescription)"
             }
             await save(lecture)
+            if lecture.status == .complete {
+                qa.lecturesChanged()  // index the new transcript for Q&A
+            }
         }
     }
 
@@ -197,8 +203,13 @@ final class LibraryViewModel {
 
     /// Opens the lecture containing `hit` at the matching moment.
     func open(_ hit: SearchHit) {
-        selectedLectureID = hit.lectureID
-        jumpRequest = JumpRequest(lectureID: hit.lectureID, time: hit.start)
+        open(hit.lectureID, at: hit.start)
+    }
+
+    /// Opens a lecture's transcript at `time`, e.g. from a Q&A citation.
+    func open(_ lectureID: Lecture.ID, at time: LectureTime) {
+        selectedLectureID = lectureID
+        jumpRequest = JumpRequest(lectureID: lectureID, time: time)
     }
 
     // MARK: - Lectures
@@ -214,6 +225,7 @@ final class LibraryViewModel {
             lectures.removeAll { $0.id == lectureID }
             searchResults.removeAll { $0.lectureID == lectureID }
             summaries.forget(lectureID)
+            qa.lecturesChanged()  // its passages were deleted with it
             if selectedLectureID == lectureID {
                 selectedLectureID = nil
             }

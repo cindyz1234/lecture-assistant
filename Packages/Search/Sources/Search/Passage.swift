@@ -1,27 +1,5 @@
 import Shared
 
-/// A stretch of consecutive transcript segments: the unit that Q&A retrieves
-/// and answers from. Long enough to contain an explanation, short enough to
-/// point at one moment.
-public struct Passage: Sendable, Hashable, Identifiable {
-    public var lectureID: Lecture.ID
-    public var start: LectureTime
-    public var end: LectureTime
-    public var text: String
-    /// Segment IDs in this passage, in order.
-    public var segmentIDs: [TranscriptSegment.ID]
-
-    public var id: String { "\(lectureID.uuidString)@\(start.milliseconds)" }
-
-    public init(lectureID: Lecture.ID, start: LectureTime, end: LectureTime, text: String, segmentIDs: [TranscriptSegment.ID]) {
-        self.lectureID = lectureID
-        self.start = start
-        self.end = end
-        self.text = text
-        self.segmentIDs = segmentIDs
-    }
-}
-
 public enum PassageBuilder {
     /// Groups a lecture's segments into passages of about `length`, starting a
     /// new passage every `stride` so neighbors overlap. Overlap means an idea
@@ -68,5 +46,24 @@ public enum PassageBuilder {
     private static func milliseconds(_ duration: Duration) -> Int64 {
         let (seconds, attoseconds) = duration.components
         return seconds * 1000 + attoseconds / 1_000_000_000_000_000
+    }
+}
+
+public enum PassageIndexer {
+    /// Splits a lecture into passages and embeds them, in batches.
+    public static func embed(
+        _ segments: [TranscriptSegment],
+        lectureID: Lecture.ID,
+        embedder: any TextEmbedder,
+        batchSize: Int = 32
+    ) async throws -> [EmbeddedPassage] {
+        let passages = PassageBuilder.passages(segments, lectureID: lectureID)
+        var embedded: [EmbeddedPassage] = []
+        for batchStart in stride(from: 0, to: passages.count, by: batchSize) {
+            let batch = Array(passages[batchStart..<min(batchStart + batchSize, passages.count)])
+            let vectors = try await embedder.embed(batch.map(\.text), as: .passage)
+            embedded += zip(batch, vectors).map { EmbeddedPassage(passage: $0, vector: $1, model: embedder.modelID) }
+        }
+        return embedded
     }
 }

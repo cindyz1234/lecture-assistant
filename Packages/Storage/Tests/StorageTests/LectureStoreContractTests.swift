@@ -272,6 +272,57 @@ struct LectureStoreContractTests {
         #expect(try await store.searchTranscripts("hydrogen", limit: 10).isEmpty)
     }
 
+    // MARK: - Q&A passages
+
+    private func embedded(_ lectureID: Lecture.ID, at seconds: Int64, model: String = "bge") -> EmbeddedPassage {
+        EmbeddedPassage(
+            passage: Passage(lectureID: lectureID, start: LectureTime(milliseconds: seconds * 1000),
+                             end: LectureTime(milliseconds: (seconds + 60) * 1000), text: "text \(seconds)",
+                             segmentIDs: [UUID(), UUID()]),
+            vector: [0.25, -1.5, .pi, 1e-7],
+            model: model
+        )
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func roundTripsPassagesAndVectorsExactly(_ implementation: Implementation) async throws {
+        let store = try implementation.makeStore()
+        let lecture = Lecture(title: "L", createdAt: date(0))
+        try await store.save(lecture)
+        let passages = [embedded(lecture.id, at: 30), embedded(lecture.id, at: 0)]
+
+        try await store.savePassages(passages, for: lecture.id)
+
+        #expect(try await store.embeddedPassages(model: "bge") == [passages[1], passages[0]])  // ordered by time
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func keepsEmbeddingModelsApartAndReportsMissingLectures(_ implementation: Implementation) async throws {
+        let store = try implementation.makeStore()
+        let indexed = Lecture(title: "Indexed", createdAt: date(0))
+        let notIndexed = Lecture(title: "Not indexed", createdAt: date(1))
+        let unfinished = Lecture(title: "Still transcribing", createdAt: date(2), status: .transcribing)
+        for lecture in [indexed, notIndexed, unfinished] { try await store.save(lecture) }
+        try await store.savePassages([embedded(indexed.id, at: 0, model: "bge")], for: indexed.id)
+
+        #expect(try await store.embeddedPassages(model: "minilm").isEmpty)
+        #expect(try await store.lecturesMissingPassages(model: "bge") == [notIndexed.id])
+        #expect(try await store.lecturesMissingPassages(model: "minilm") == [indexed.id, notIndexed.id])
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func savingPassagesReplacesAndDeletingLectureRemovesThem(_ implementation: Implementation) async throws {
+        let store = try implementation.makeStore()
+        let lecture = Lecture(title: "L", createdAt: date(0))
+        try await store.save(lecture)
+        try await store.savePassages([embedded(lecture.id, at: 0), embedded(lecture.id, at: 30)], for: lecture.id)
+        try await store.savePassages([embedded(lecture.id, at: 90)], for: lecture.id)
+        #expect(try await store.embeddedPassages(model: "bge").map(\.passage.start.seconds) == [90])
+
+        try await store.deleteLecture(lecture.id)
+        #expect(try await store.embeddedPassages(model: "bge").isEmpty)
+    }
+
     @Test(arguments: Implementation.allCases)
     func deletingUnknownLectureIsNoOp(_ implementation: Implementation) async throws {
         let store = try implementation.makeStore()

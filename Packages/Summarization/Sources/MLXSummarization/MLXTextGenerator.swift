@@ -12,10 +12,13 @@ public struct MLXTextGenerator: TextGenerator {
     /// Qwen3 1.7B, 4-bit (~940 MB).
     public static let defaultModel = LLMRegistry.qwen3_1_7b_4bit
 
+    /// Hugging Face ID of the loaded model.
+    public let modelID: String
     private let container: ModelContainer
 
-    private init(container: ModelContainer) {
+    private init(container: ModelContainer, modelID: String) {
         self.container = container
+        self.modelID = modelID
     }
 
     /// Downloads the model on first use (cached afterwards in `ModelStorage`), then loads it.
@@ -32,7 +35,7 @@ public struct MLXTextGenerator: TextGenerator {
             configuration: model,
             progressHandler: { downloadProgress in progress?(downloadProgress.fractionCompleted) }
         )
-        return MLXTextGenerator(container: container)
+        return MLXTextGenerator(container: container, modelID: model.name)
     }
 
     public func generate(instructions: String, prompt: String, maxTokens: Int) async throws -> String {

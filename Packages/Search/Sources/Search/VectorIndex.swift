@@ -24,6 +24,12 @@ public struct VectorIndex: Sendable {
         return count - 1
     }
 
+    /// The stored (normalized) vector for `row`, e.g. to build a smaller index from a subset.
+    public func vector(at row: Int) -> [Float] {
+        precondition(row >= 0 && row < count, "row \(row) out of range")
+        return Array(storage[(row * dimension)..<((row + 1) * dimension)])
+    }
+
     /// The `k` rows most similar to `query`, best first, with cosine similarities.
     public func nearest(to query: [Float], k: Int) -> [(row: Int, similarity: Float)] {
         precondition(query.count == dimension, "expected \(dimension) dimensions, got \(query.count)")

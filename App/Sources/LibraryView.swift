@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 struct LibraryView: View {
     @Bindable var model: LibraryViewModel
     @State private var isPickingFile = false
+    @State private var isAsking = false
     @State private var realTime = false
 
     var body: some View {
@@ -43,6 +44,14 @@ struct LibraryView: View {
                     Toggle("Real-time", isOn: $realTime)
                         .help("Play the file at 1× speed to simulate a live lecture")
                 }
+                ToolbarItem {
+                    Button("Ask", systemImage: "questionmark.bubble") {
+                        isAsking = true
+                    }
+                    .keyboardShortcut("k")
+                    .disabled(model.lectures.isEmpty)
+                    .help("Ask a question about your lectures (⌘K)")
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Import", systemImage: "square.and.arrow.down") {
                         isPickingFile = true
@@ -67,6 +76,9 @@ struct LibraryView: View {
                         .disabled(!model.canImport)
                 }
             }
+        }
+        .sheet(isPresented: $isAsking) {
+            AskView(model: model)
         }
         .fileImporter(isPresented: $isPickingFile, allowedContentTypes: [.audio, .movie]) { result in
             if case .success(let url) = result {

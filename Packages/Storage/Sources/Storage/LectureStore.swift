@@ -27,6 +27,12 @@ public protocol LectureStore: Sendable {
     /// segments with more and rarer words. Very common words ("the", "is") are
     /// ignored unless the query has nothing else. A query without words finds nothing.
     func searchTranscripts(_ query: String, limit: Int, matching: SearchMatching) async throws -> [SearchHit]
+    /// Replaces the lecture's Q&A passages (all embedding models).
+    func savePassages(_ passages: [EmbeddedPassage], for lectureID: Lecture.ID) async throws
+    /// All passages embedded with `model`, ordered by lecture and time.
+    func embeddedPassages(model: String) async throws -> [EmbeddedPassage]
+    /// Complete lectures with no passages embedded with `model` yet.
+    func lecturesMissingPassages(model: String) async throws -> [Lecture.ID]
 }
 
 /// How search treats the words of a query.
@@ -75,6 +81,7 @@ public actor InMemoryLectureStore: LectureStore {
     private var lecturesByID: [Lecture.ID: Lecture] = [:]
     private var segmentsByLecture: [Lecture.ID: [TranscriptSegment]] = [:]
     private var summariesByLecture: [Lecture.ID: LectureSummary] = [:]
+    private var passagesByLecture: [Lecture.ID: [EmbeddedPassage]] = [:]
 
     public init() {}
 
@@ -100,6 +107,26 @@ public actor InMemoryLectureStore: LectureStore {
         lecturesByID[lectureID] = nil
         segmentsByLecture[lectureID] = nil
         summariesByLecture[lectureID] = nil
+        passagesByLecture[lectureID] = nil
+    }
+
+    public func savePassages(_ passages: [EmbeddedPassage], for lectureID: Lecture.ID) throws {
+        guard lecturesByID[lectureID] != nil else { throw LectureStoreError.lectureNotFound(lectureID) }
+        passagesByLecture[lectureID] = passages
+    }
+
+    public func embeddedPassages(model: String) -> [EmbeddedPassage] {
+        passagesByLecture
+            .sorted { $0.key.uuidString < $1.key.uuidString }
+            .flatMap { $0.value.filter { $0.model == model }.sorted { $0.passage.start < $1.passage.start } }
+    }
+
+    public func lecturesMissingPassages(model: String) -> [Lecture.ID] {
+        lecturesByID.values
+            .filter { $0.status == .complete }
+            .filter { lecture in !(passagesByLecture[lecture.id] ?? []).contains { $0.model == model } }
+            .sorted { $0.createdAt < $1.createdAt }
+            .map(\.id)
     }
 
     public func saveSummary(_ summary: LectureSummary, for lectureID: Lecture.ID) throws {

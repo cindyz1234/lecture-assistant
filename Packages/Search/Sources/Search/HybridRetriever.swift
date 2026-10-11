@@ -47,6 +47,32 @@ public struct HybridRetriever: Sendable {
         self.keywordSearch = keywordSearch
     }
 
+    /// A retriever over passages that were embedded earlier (e.g. loaded from storage).
+    public init(embedded: [EmbeddedPassage], embedder: any TextEmbedder, keywordSearch: @escaping KeywordSearch) {
+        var index = VectorIndex(dimension: embedded.first?.vector.count ?? 1)
+        for passage in embedded { index.add(passage.vector) }
+        self.init(passages: embedded.map(\.passage), index: index, embedder: embedder, keywordSearch: keywordSearch)
+    }
+
+    /// The same retriever restricted to one lecture: its passages only, and
+    /// keyword hits from other lectures filtered out. Asking within one lecture
+    /// avoids cross-subject confusion (e.g. "L" the matrix vs. "l" the quantum number).
+    public func scoped(to lectureID: Lecture.ID) -> HybridRetriever {
+        let rows = passages.indices.filter { passages[$0].lectureID == lectureID }
+        var subset = VectorIndex(dimension: index.dimension)
+        for row in rows { subset.add(index.vector(at: row)) }
+        let search = keywordSearch
+        let candidates = candidates
+        var scoped = HybridRetriever(passages: rows.map { passages[$0] }, index: subset, embedder: embedder) { query, limit in
+            // Ask for extra hits, since most may come from other lectures.
+            try await search(query, limit * 4).filter { $0.lectureID == lectureID }
+        }
+        scoped.rrfK = rrfK
+        scoped.keywordWeight = keywordWeight
+        scoped.candidates = candidates
+        return scoped
+    }
+
     /// Embeds `passages` and builds a retriever over them.
     public static func build(
         passages: [Passage],
