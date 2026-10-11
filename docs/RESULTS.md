@@ -34,6 +34,56 @@ The most frequent substitutions fall into three groups:
 
 Math has the highest WER: dense notation spoken as letters ("A k", "lambda one").
 
+### Run-to-run variation
+
+Re-running the same model on the same audio gave a different result
+(2026-10-11, rerun to produce timestamped transcripts):
+
+| Run | 18.06 | 5.111 | 8.04 | Overall |
+|---|---:|---:|---:|---:|
+| 1 (baseline above) | 8.99% | 4.10% | 7.13% | 6.62% |
+| 2 | 10.08% | 4.13% | 7.21% | 6.90% |
+
+Segment counts also differed (e.g. 993 vs. 957 for 5.111). The likely cause is
+WhisperKit's temperature fallback, which re-decodes low-confidence windows with
+random sampling. Until decoding is made deterministic, compare models by the
+mean over several runs: a single-run difference under ~0.3 points is noise.
+
+## Summarization (Qwen3-1.7B 4-bit, MLX)
+
+Map-reduce over the base.en transcripts of the test lectures, run with
+`Tools/summarize` (see README). Greedy decoding, so results are repeatable for a
+given transcript.
+
+| Lecture | Length | Words | Model calls | Time (Mac) | Key points span |
+|---|---|---:|---:|---:|---|
+| 18.06 L22 | 51:50 | 5,720 | 6 | 18.5 s | 0:09 – 44:12 |
+| 5.111 L6 | 48:31 | 8,515 | 9 | 23.3 s | 0:00 – 47:46 |
+| 8.04 L6 | 1:22:18 | 13,595 | 13 | 39.4 s | 0:02 – 1:19:42 |
+
+Model ~940 MB on disk; peak process memory 1,076 MB. Target "60-minute lecture
+in < 60 s" is met on the Mac; iPhone not yet measured.
+
+### What changed during development (measured on these lectures)
+
+| Version | Problem found | Fix |
+|---|---|---|
+| v1: model picks key points in the reduce step | All points came from the first 21:30 of 51:50 and 13:40 of 48:31; duplicates; LaTeX; "S⁻¹AS = I" (should be Λ) | Key points selected by code, evenly across chunks; reduce writes only the overview; LaTeX converted to plain text |
+| v2 | Points copied transcript lines; near-duplicate points | Map prompt asks for distinct ideas in own words |
+| v3 | Model copied the prompt's example sentence into its output | Content-free format example, filtered from output; run-on points split |
+
+### Known limitations (v4, recorded above)
+
+- **Factual errors remain**, e.g. "the square root of 5 is approximately 1.618"
+  (the lecture says (1+√5)/2 ≈ 1.618). Factual consistency is not yet measured.
+- Some key points are still near-quotes of the transcript.
+- Prompts were adjusted while reading test-lecture outputs (only for obvious
+  formatting failures). Further prompt tuning must use the dev split (7.016 L4)
+  so test results stay unbiased.
+
+Next: an evaluation set (factual consistency, key-concept coverage) and a
+comparison with larger models (Qwen3-4B, Qwen3.5-2B) on the dev split.
+
 ## On-device performance
 
 RTF (real-time factor) = processing time / audio duration. Lower is better; target < 0.3.

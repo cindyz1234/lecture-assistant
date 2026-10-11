@@ -19,6 +19,7 @@ let package = Package(
         .testTarget(name: "StorageTests", dependencies: [
             "Storage",
             .product(name: "Shared", package: "Shared"),
+            .product(name: "GRDB", package: "GRDB.swift"),
         ]),
     ]
 )

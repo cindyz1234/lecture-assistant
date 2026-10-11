@@ -75,3 +75,27 @@ public struct Lecture: Sendable, Hashable, Codable, Identifiable {
         self.sourceFileName = sourceFileName
     }
 }
+
+/// One summary point, linked to the moment in the lecture it refers to.
+public struct SummaryItem: Sendable, Hashable, Codable {
+    public var text: String
+    /// Start of the transcript segment this point refers to.
+    public var start: LectureTime
+
+    public init(text: String, start: LectureTime) {
+        self.text = text
+        self.start = start
+    }
+}
+
+/// A lecture summary: a short overview plus timestamped key points.
+public struct LectureSummary: Sendable, Hashable, Codable {
+    public var overview: String
+    /// Ordered by `start`.
+    public var keyPoints: [SummaryItem]
+
+    public init(overview: String, keyPoints: [SummaryItem]) {
+        self.overview = overview
+        self.keyPoints = keyPoints
+    }
+}

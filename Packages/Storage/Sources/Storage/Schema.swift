@@ -31,6 +31,25 @@ enum Schema {
                           on: "transcriptSegment", columns: ["lectureId", "startMs"])
         }
 
+        migrator.registerMigration("v2: lecture summaries") { db in
+            // One summary per lecture; regenerating replaces it.
+            try db.create(table: "summary") { t in
+                t.primaryKey("lectureId", .text)
+                    .references("lecture", onDelete: .cascade)
+                t.column("overview", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+
+            try db.create(table: "summaryPoint") { t in
+                t.column("lectureId", .text).notNull()
+                    .references("summary", onDelete: .cascade)
+                t.column("position", .integer).notNull()
+                t.column("startMs", .integer).notNull()
+                t.column("text", .text).notNull()
+                t.primaryKey(["lectureId", "position"])
+            }
+        }
+
         return migrator
     }
 }

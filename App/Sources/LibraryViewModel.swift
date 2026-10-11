@@ -31,12 +31,14 @@ final class LibraryViewModel {
 
     let store: any LectureStore
     let storageWarning: String?
+    let summaries: SummaryController
     private var transcriber: WhisperKitWindowTranscriber?
     private var transcriptionTask: Task<Void, Never>?
 
     init(store: any LectureStore, storageWarning: String? = nil) {
         self.store = store
         self.storageWarning = storageWarning
+        self.summaries = SummaryController(store: store)
     }
 
     var canImport: Bool {
@@ -162,10 +164,11 @@ final class LibraryViewModel {
     }
 
     func deleteLecture(_ lectureID: Lecture.ID) async {
-        guard lectureID != activeLectureID else { return }
+        guard lectureID != activeLectureID, !summaries.isWorking(on: lectureID) else { return }
         do {
             try await store.deleteLecture(lectureID)
             lectures.removeAll { $0.id == lectureID }
+            summaries.forget(lectureID)
             if selectedLectureID == lectureID {
                 selectedLectureID = nil
             }

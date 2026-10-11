@@ -83,8 +83,42 @@ public final class SQLiteLectureStore: LectureStore {
         }
     }
 
+    public func saveSummary(_ summary: LectureSummary, for lectureID: Lecture.ID) async throws {
+        let id = lectureID.uuidString
+        let record = SummaryRecord(lectureId: id, overview: summary.overview, createdAt: Date())
+        let points = summary.keyPoints.enumerated().map { position, point in
+            SummaryPointRecord(lectureId: id, position: position, startMs: point.start.milliseconds, text: point.text)
+        }
+        try await database.write { db in
+            guard try LectureRecord.exists(db, key: id) else {
+                throw LectureStoreError.lectureNotFound(lectureID)
+            }
+            // Replacing the summary row cascades to its old points.
+            try SummaryRecord.deleteOne(db, key: id)
+            try record.insert(db)
+            for point in points {
+                try point.insert(db)
+            }
+        }
+    }
+
+    public func summary(for lectureID: Lecture.ID) async throws -> LectureSummary? {
+        let id = lectureID.uuidString
+        return try await database.read { db in
+            guard try LectureRecord.exists(db, key: id) else {
+                throw LectureStoreError.lectureNotFound(lectureID)
+            }
+            guard let record = try SummaryRecord.fetchOne(db, key: id) else { return nil }
+            let points = try SummaryPointRecord
+                .filter(SummaryPointRecord.Columns.lectureId == id)
+                .order(SummaryPointRecord.Columns.position)
+                .fetchAll(db)
+            return LectureSummary(overview: record.overview, keyPoints: points.map { $0.model() })
+        }
+    }
+
     public func deleteLecture(_ lectureID: Lecture.ID) async throws {
-        // Segments are removed by the ON DELETE CASCADE foreign key.
+        // Segments and the summary are removed by ON DELETE CASCADE foreign keys.
         _ = try await database.write { db in
             try LectureRecord.deleteOne(db, key: lectureID.uuidString)
         }

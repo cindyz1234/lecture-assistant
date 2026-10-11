@@ -55,3 +55,6 @@ ml/training/checkpoints/
 
 # --- OS ---
 .DS_Store
+
+# Tools built with xcodebuild (needed for MLX/Metal)
+Tools/.xcbuild/
