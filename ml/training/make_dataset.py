@@ -1,13 +1,15 @@
 """Build Whisper fine-tuning examples from lecture audio and caption files.
 
 Consecutive caption cues are grouped into clips of at most 30 seconds (Whisper's
-input window). Each clip's audio is cut from the 16 kHz lecture WAV and saved
-next to a JSONL manifest of {audio, text, cues, lecture_id, start, end}. `cues`
-holds [start, end, text] relative to the clip audio, for timestamped targets.
+input window). Each clip is a line in a JSONL manifest of {audio, start, end,
+text, cues, lecture_id}: `audio` is the full 16 kHz lecture WAV and start/end
+locate the clip in it, so no audio is copied (~100 MB saved per lecture).
+`cues` holds [start, end, text] relative to the clip start, for timestamped
+targets.
 
     python3 ml/training/make_dataset.py --split train --split dev
 
-Writes ml/data/clips/<split>/<lecture_id>/<n>.wav and ml/data/clips/<split>.jsonl.
+Writes ml/data/clips/<split>.jsonl.
 Clip text keeps the captions' casing and punctuation (Whisper outputs formatted
 text); speaker labels and non-speech annotations are removed.
 """
@@ -131,17 +133,14 @@ def relative_cues(clip: Clip, audio_start: float, audio_end: float) -> list[list
     ]
 
 
-def cut_clip(source: wave.Wave_read, start: float, end: float, destination: Path) -> None:
-    """Copy [start, end) seconds of `source` into a new WAV with the same format."""
-    rate = source.getframerate()
-    first = max(0, int(start * rate))
-    last = min(source.getnframes(), int(end * rate))
-    source.setpos(first)
-    frames = source.readframes(max(0, last - first))
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    with wave.open(str(destination), "wb") as out:
-        out.setparams(source.getparams())
-        out.writeframes(frames)
+def read_clip(path: Path, start: float, end: float) -> bytes:
+    """16-bit PCM frames for [start, end) seconds of a WAV file."""
+    with wave.open(str(path), "rb") as source:
+        rate = source.getframerate()
+        first = max(0, int(start * rate))
+        last = min(source.getnframes(), int(end * rate))
+        source.setpos(first)
+        return source.readframes(max(0, last - first))
 
 
 def lectures_in(splits: list[str]) -> list[dict[str, str]]:
@@ -151,7 +150,6 @@ def lectures_in(splits: list[str]) -> list[dict[str, str]]:
 
 def build_split(split: str) -> tuple[int, float]:
     """Writes clips and the JSONL manifest for one split; returns (clips, hours)."""
-    out_dir = CLIPS_DIR / split
     manifest_path = CLIPS_DIR / f"{split}.jsonl"
     count, seconds = 0, 0.0
     CLIPS_DIR.mkdir(parents=True, exist_ok=True)
@@ -166,21 +164,19 @@ def build_split(split: str) -> tuple[int, float]:
             clips = group_cues(parse_vtt(captions.read_text(encoding="utf-8", errors="replace")))
             with wave.open(str(audio), "rb") as source:
                 duration = source.getnframes() / source.getframerate()
-                for index, clip in enumerate(clips):
-                    start = max(0.0, clip.start - PADDING_SECONDS)
-                    end = min(duration, clip.end + PADDING_SECONDS, start + MAX_CLIP_SECONDS)
-                    path = out_dir / lecture_id / f"{index:04d}.wav"
-                    cut_clip(source, start, end, path)
-                    manifest.write(json.dumps({
-                        "audio": str(path.relative_to(ROOT)),
-                        "text": clip.text,
-                        "cues": relative_cues(clip, start, end),
-                        "lecture_id": lecture_id,
-                        "start": round(start, 3),
-                        "end": round(end, 3),
-                    }) + "\n")
-                    count += 1
-                    seconds += end - start
+            for clip in clips:
+                start = max(0.0, clip.start - PADDING_SECONDS)
+                end = min(duration, clip.end + PADDING_SECONDS, start + MAX_CLIP_SECONDS)
+                manifest.write(json.dumps({
+                    "audio": str(audio.relative_to(ROOT)),
+                    "start": round(start, 3),
+                    "end": round(end, 3),
+                    "text": clip.text,
+                    "cues": relative_cues(clip, start, end),
+                    "lecture_id": lecture_id,
+                }) + "\n")
+                count += 1
+                seconds += end - start
             print(f"  {lecture_id}: {len(clips)} clips")
     return count, seconds / 3600
 

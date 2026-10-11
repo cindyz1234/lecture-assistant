@@ -85,6 +85,28 @@ def extract_audio(video: Path, wav: Path) -> None:
     )
 
 
+def fetch_lecture(row: dict[str, str], delete_video: bool) -> None:
+    """Downloads captions and audio for one lecture, skipping what already exists.
+
+    The video is only needed to extract audio, so it isn't downloaded when the
+    WAV exists, and with `delete_video` it is removed after extraction.
+    """
+    lecture_id = row["lecture_id"]
+    print(lecture_id)
+    if row["transcript_url"].strip():
+        download(row["transcript_url"], RAW_DIR / f"{lecture_id}{url_suffix(row['transcript_url'], '.txt')}")
+    wav = PROCESSED_DIR / f"{lecture_id}.wav"
+    video = RAW_DIR / f"{lecture_id}{url_suffix(row['video_url'], '.mp4')}"
+    if wav.exists():
+        print(f"  exists, skipping: {wav.name}")
+    else:
+        download(row["video_url"], video)
+        extract_audio(video, wav)
+    if delete_video and video.exists():
+        video.unlink()
+        print(f"  deleted {video.name}")
+
+
 def url_suffix(url: str, default: str) -> str:
     return Path(urlparse(url).path).suffix.lower() or default
 
@@ -93,6 +115,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=MANIFEST)
     parser.add_argument("--split", choices=["train", "dev", "test"])
+    parser.add_argument("--delete-video", action="store_true",
+                        help="delete each video after extracting its audio (saves ~100-250 MB per lecture)")
     args = parser.parse_args()
 
     if shutil.which("ffmpeg") is None:
@@ -112,13 +136,7 @@ def main() -> int:
     RAW_DIR.mkdir(exist_ok=True)
     PROCESSED_DIR.mkdir(exist_ok=True)
     for row in rows:
-        lecture_id = row["lecture_id"]
-        print(lecture_id)
-        video = RAW_DIR / f"{lecture_id}{url_suffix(row['video_url'], '.mp4')}"
-        download(row["video_url"], video)
-        if row["transcript_url"].strip():
-            download(row["transcript_url"], RAW_DIR / f"{lecture_id}{url_suffix(row['transcript_url'], '.txt')}")
-        extract_audio(video, PROCESSED_DIR / f"{lecture_id}.wav")
+        fetch_lecture(row, delete_video=args.delete_video)
 
     print(f"Done: {len(rows)} lecture(s)")
     return 0
