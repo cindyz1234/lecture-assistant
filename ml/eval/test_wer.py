@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from wer import evaluate, normalize, read_transcript
+from wer import evaluate, normalize, read_transcript, select_lectures
 
 
 @pytest.mark.parametrize(
@@ -16,6 +16,7 @@ from wer import evaluate, normalize, read_transcript
         ("plus 3x equals 2", "plus three x equals two"),
         ("u to the 100th power, the 1st and 2nd", "u to the one hundredth power the first and second"),
         ("Okay, so x + y = 1", "ok so x plus y equals one"),
+        ("The Schrödinger equation, naïve café", "the schrodinger equation naive cafe"),
         ("It's 50% done", "it's fifty percent done"),
         ("  extra   spaces  ", "extra spaces"),
     ],
@@ -57,3 +58,11 @@ def test_overall_wer_is_corpus_level() -> None:
     rows, overall = evaluate(pairs)
     assert [row[2] for row in rows] == [0.0, 0.5]  # sorted by id: long, short
     assert overall == pytest.approx(1 / 10)
+
+
+def test_only_lectures_in_the_split_count_as_missing() -> None:
+    references = {"test-a", "test-b", "train-a"}
+    hypotheses = {"test-a"}
+
+    assert select_lectures(references, hypotheses, {"test-a", "test-b"}) == ({"test-a"}, {"test-b"})
+    assert select_lectures(references, hypotheses, None) == ({"test-a"}, {"test-b", "train-a"})

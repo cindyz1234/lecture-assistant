@@ -13,7 +13,8 @@ App/            SwiftUI app (thin UI layer)
 Packages/       Swift packages: Shared, AudioCapture, AudioDSP, Transcription,
                 Summarization, Storage, Search
 ml/data/        manifest.csv + download/extract script (no media committed)
-ml/eval/        evaluation scripts (WER, ...)
+ml/eval/        evaluation scripts (WER, term recall, reference checks)
+ml/training/    Whisper fine-tuning and Core ML export (see ml/training/README.md)
 Tools/          command-line tools, e.g. `transcribe` for batch evaluation
 docs/           DESIGN.md, RESULTS.md
 project.yml     XcodeGen spec for the app project
@@ -85,6 +86,10 @@ Evaluation and training audio comes from
 [MIT OpenCourseWare](https://ocw.mit.edu), used under the
 [Creative Commons BY-NC-SA 4.0 license](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 Courses used are listed in [`ml/data/manifest.csv`](ml/data/manifest.csv).
-Items marked "All rights reserved" are excluded. Media files are not
+Items marked "All rights reserved" are excluded.
+
+The general-speech check uses a subset of
+[LibriSpeech](https://www.openslr.org/12) test-clean (Panayotov et al., 2015),
+licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Media files are not
 redistributed in this repository. This project is non-commercial and is not
 affiliated with or endorsed by MIT.
