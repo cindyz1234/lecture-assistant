@@ -41,6 +41,11 @@ RTF (real-time factor) = processing time / audio duration. Lower is better; targ
 | Model | Device | Audio | RTF | Caption latency | Peak memory | Date |
 |---|---|---|---:|---:|---:|---|
 | Whisper base.en | Mac15,6 (dev Mac), release build | 3 test lectures, 3 h 2 min | 0.020–0.025 | n/a | not measured | 2026-10-10 |
+| Whisper base.en | iPhone 16 (iPhone17,3), iOS 26.5.2, release build | 5.111 L6, 48:31 (AAC 64 kbps) | 0.020 | n/a | not measured | 2026-10-10 |
 
-A 50-minute lecture transcribes in about one minute on the Mac. Model load
-(after download) takes about 15 s. iPhone numbers still to be measured.
+A 50-minute lecture transcribes in about one minute on both devices. On the
+same lecture the iPhone took 58 s vs. 66 s on the Mac, likely because WhisperKit
+runs mostly on the Neural Engine and the A18's is newer than the Mac's.
+The iPhone figure is a single run in the app (screen on, app in foreground,
+time shown to the whole second); battery use and thermal state were not
+measured. Model load (after download) takes about 15 s on the Mac.
