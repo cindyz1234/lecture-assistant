@@ -50,6 +50,18 @@ enum Schema {
             }
         }
 
+        migrator.registerMigration("v3: transcript full-text search") { db in
+            // External-content FTS5 index over transcriptSegment.text. GRDB adds
+            // triggers that keep it in sync on insert/update/delete, and rebuilds
+            // it from the rows that already exist.
+            try db.create(virtualTable: "transcriptSegment_ft", using: FTS5()) { t in
+                t.synchronize(withTable: "transcriptSegment")
+                // Porter stemming: "eigenvalues" and "eigenvalue" match each other.
+                t.tokenizer = .porter(wrapping: .unicode61())
+                t.column("text")
+            }
+        }
+
         return migrator
     }
 }

@@ -84,6 +84,40 @@ in < 60 s" is met on the Mac; iPhone not yet measured.
 Next: an evaluation set (factual consistency, key-concept coverage) and a
 comparison with larger models (Qwen3-4B, Qwen3.5-2B) on the dev split.
 
+## Keyword search (SQLite FTS5)
+
+`Tools/searchbench` builds a database by repeating the 3 test transcripts
+(real Whisper output) and times queries (limit 50, 20 runs after a warm-up).
+Repeating text gives more matches per query than a real library, so this is
+a slightly harsher test.
+
+100 hours (99 lectures, 117,315 segments), Mac15,6:
+
+| Query | Results | p50 (ms) | p95 (ms) |
+|---|---:|---:|---:|
+| eigenvalue | 50 | 3.8 | 4.6 |
+| determinant | 50 | 1.8 | 2.1 |
+| schrodinger | 50 | 3.4 | 4.8 |
+| eigen (prefix) | 50 | 9.6 | 10.7 |
+| the (stopword only) | 50 | 4.5 | 4.6 |
+| wave function | 50 | 6.4 | 7.2 |
+| principal quantum number | 50 | 1.5 | 1.7 |
+| xylophone (no match) | 0 | 0.4 | 0.4 |
+
+Worst p95: **10.7 ms** (target < 100 ms). At 200 hours the worst p95 is 33 ms.
+
+### Optimization log (200 hours, query "the")
+
+| Attempt | p95 | Kept? |
+|---|---:|---|
+| Rank all matches with bm25, highlight in the same query | 165.7 ms | baseline |
+| Order by FTS5's hidden `rank` column | 226.7 ms | no |
+| Rank in a subquery, highlight only the top 50 | 352.4 ms | no (re-runs MATCH per result) |
+| Ignore stopwords; stopword-only queries unranked | **8.7 ms** | yes |
+
+The cost was scoring every match of a word found in nearly every segment.
+iPhone search latency not yet measured.
+
 ## On-device performance
 
 RTF (real-time factor) = processing time / audio duration. Lower is better; target < 0.3.

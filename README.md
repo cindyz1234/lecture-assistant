@@ -70,6 +70,12 @@ Tools/.xcbuild/Build/Products/Release/summarize --out ml/eval/outputs/summaries 
     ml/eval/outputs/base.en/*.segments.json
 ```
 
+Benchmark transcript search on 100+ hours built from those transcripts:
+
+```sh
+swift run -c release --package-path Tools searchbench --hours 100 ml/eval/outputs/base.en/*.segments.json
+```
+
 In Xcode, the first build asks you to **Trust & Enable** the MLX package's
 macros and build plugin.
 

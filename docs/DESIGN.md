@@ -38,9 +38,9 @@ flowchart LR
 | AudioCapture | `AudioSource` protocol; `FileAudioSource` | file source done |
 | AudioDSP | Resample, VAD, ring buffer (C++) | protocol only |
 | Transcription | `TranscriptionEngine`, windowed engine, WhisperKit adapter | WhisperKit `base.en` working |
-| Storage | `LectureStore`; SQLite (GRDB 7.11.1) + in-memory | SQLite done; FTS5 in Phase 4 |
+| Storage | `LectureStore`; SQLite (GRDB 7.11.1) + in-memory; FTS5 keyword search | done |
 | Summarization | Map-reduce summarizer + MLX adapter (Qwen3-1.7B 4-bit) | working on Mac; iPhone untested |
-| Search | `SearchIndex` protocol | protocol only |
+| Search | Keyword search lives in Storage (FTS5); this package is for semantic search | protocol only |
 
 The app target only wires packages together and renders state. It depends on
 protocols, so tests and previews can use fakes.
@@ -115,6 +115,20 @@ latency further.
   plugin). `swift build`/`swift test` still compile it and run the logic tests.
 - Summaries are stored by migration v2 (`summary`, `summaryPoint`), cascading
   from `lecture`.
+
+### Keyword search: FTS5 inside the lecture database
+- Migration v3 adds `transcriptSegment_ft`, an external-content FTS5 table over
+  `transcriptSegment.text`. GRDB's triggers keep it in sync (including cascade
+  deletes) and the migration rebuilds it, so existing lectures become searchable.
+- Porter stemming plus prefix queries: "connection" finds "connected", "eigen"
+  finds "eigenvalue". Every query word must appear in the same segment.
+- User text goes through `FTS5Pattern`, which quotes each word, so quotes,
+  `AND`, `NEAR(` and `*` can't cause syntax errors.
+- Results are ranked by bm25 with matches marked via `highlight()`. Very common
+  words are ignored when the query has other words, and stopword-only queries
+  skip ranking: scoring every match of "the" took 165 ms at 200 hours.
+- It lives in `Storage`, not `Search`, because the index is part of the lecture
+  database; `Search` is reserved for embedding-based and hybrid search.
 
 ### Imported files are copied into the app container
 Files from the picker are security-scoped. We copy them before processing so

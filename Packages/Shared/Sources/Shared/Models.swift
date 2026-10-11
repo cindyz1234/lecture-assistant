@@ -99,3 +99,44 @@ public struct LectureSummary: Sendable, Hashable, Codable {
         self.keyPoints = keyPoints
     }
 }
+
+/// A search result: one transcript segment and where it is in a lecture.
+public struct SearchHit: Sendable, Hashable, Identifiable {
+    /// A piece of the segment's text; `isMatch` marks words that matched the query.
+    public struct Fragment: Sendable, Hashable {
+        public var text: String
+        public var isMatch: Bool
+
+        public init(text: String, isMatch: Bool) {
+            self.text = text
+            self.isMatch = isMatch
+        }
+    }
+
+    public var lectureID: Lecture.ID
+    public var lectureTitle: String
+    public var segmentID: TranscriptSegment.ID
+    public var start: LectureTime
+    public var fragments: [Fragment]
+    /// Relevance; higher is better.
+    public var score: Double
+
+    public var id: TranscriptSegment.ID { segmentID }
+    public var text: String { fragments.map(\.text).joined() }
+
+    public init(
+        lectureID: Lecture.ID,
+        lectureTitle: String,
+        segmentID: TranscriptSegment.ID,
+        start: LectureTime,
+        fragments: [Fragment],
+        score: Double
+    ) {
+        self.lectureID = lectureID
+        self.lectureTitle = lectureTitle
+        self.segmentID = segmentID
+        self.start = start
+        self.fragments = fragments
+        self.score = score
+    }
+}
