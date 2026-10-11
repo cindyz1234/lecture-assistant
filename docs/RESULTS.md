@@ -224,6 +224,44 @@ Worst p95: **10.7 ms** (target < 100 ms). At 200 hours the worst p95 is 33 ms.
 The cost was scoring every match of a word found in nearly every segment.
 iPhone search latency not yet measured.
 
+## Q&A retrieval (passages, embeddings, hybrid ranking)
+
+Question set: `ml/eval/qa_questions.jsonl`, 89 questions written before any
+retrieval code existed, for 15 evenly spaced 60 s windows per dev/test lecture
+(`ml/eval/qa_windows.py`; one window skipped: a poem at the end of class).
+Paraphrased, not copied from the lecture. 44 dev questions (for choices), 45
+test (reported). A passage counts as correct if it is from the question's
+lecture and overlaps its window by ≥ 20 s. Every question searches the whole
+library: 18 lectures, 17.2 hours, 1,899 passages (base.en transcripts).
+Drafted by Claude; meant to be reviewed and extended by hand.
+
+Choices on dev (`Tools/qaeval`):
+
+| Choice | Dev result | Picked |
+|---|---|---|
+| Embedding model | Semantic recall@5: bge-small-en-v1.5 0.75, all-MiniLM-L6-v2 0.66 | bge-small |
+| Fusion | Equal-weight RRF hurt (0.66 vs 0.75 semantic only); keyword weight 0.25: 0.77 | weight 0.25 |
+| Passage length | 60 s / 30 s overlap: R@1 0.52; 90 s / 45 s: R@1 0.45 | 60 s / 30 s |
+
+Test (45 questions, run once with the configuration chosen on dev):
+
+| Mode | Recall@1 | **Recall@5** | MRR@10 | Median ms/query (Mac) |
+|---|---:|---:|---:|---:|
+| Keyword only (FTS5, any word) | 0.27 | 0.58 | 0.39 | 3.7 |
+| Semantic only (bge-small) | 0.60 | 0.87 | 0.71 | 10.2 |
+| **Hybrid (chosen)** | 0.51 | **0.89** | 0.66 | 14.7 |
+
+**Recall@5 0.89, target ≥ 0.8.** Semantic-only ranks the right passage first
+more often on test (0.60 vs 0.51); the configuration was not changed after
+seeing this. The answer step reads the top 5 passages, so recall@5 is the
+deciding metric.
+
+The ground truth is strict (one window per question), so 0.89 understates
+retrieval quality: 3 of the 5 misses retrieved a passage where the lecture
+returns to the same idea later (Fibonacci eigenvalues at 45:35) or another
+lecture covers it (the Schrödinger equation in 8.04 L5); the other 2 are a few
+minutes before their window.
+
 ## On-device performance
 
 RTF (real-time factor) = processing time / audio duration. Lower is better; target < 0.3.

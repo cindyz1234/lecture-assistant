@@ -246,6 +246,16 @@ struct LectureStoreContractTests {
     }
 
     @Test(arguments: Implementation.allCases)
+    func anyWordSearchMatchesSegmentsWithSomeOfTheWords(_ implementation: Implementation) async throws {
+        let (store, linear, quantum) = try await makeSearchFixture(implementation)
+        let question = "how is the determinant of a hydrogen spectroscopy matrix computed"
+
+        #expect(try await store.searchTranscripts(question, limit: 10).isEmpty)  // no segment has all words
+        let hits = try await store.searchTranscripts(question, limit: 10, matching: .anyWord)
+        #expect(Set(hits.map(\.lectureID)) == [linear.id, quantum.id])
+    }
+
+    @Test(arguments: Implementation.allCases)
     func searchRespectsLimit(_ implementation: Implementation) async throws {
         let (store, _, _) = try await makeSearchFixture(implementation)
 

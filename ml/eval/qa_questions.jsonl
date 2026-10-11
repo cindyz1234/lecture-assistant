@@ -1,0 +1,89 @@
+{"id": "18.06-L04-q00", "split": "dev", "lecture_id": "18.06-L04", "question": "What factorization does this lecture say sums up Gaussian elimination?", "start": 66, "end": 126}
+{"id": "18.06-L04-q01", "split": "dev", "lecture_id": "18.06-L04", "question": "How do you find the inverse of the transpose of a matrix?", "start": 258, "end": 318}
+{"id": "18.06-L04-q02", "split": "dev", "lecture_id": "18.06-L04", "question": "If elimination needs no row exchanges, how is the original matrix connected to the upper triangular result?", "start": 450, "end": 510}
+{"id": "18.06-L04-q03", "split": "dev", "lecture_id": "18.06-L04", "question": "Why does the inverse of an elimination matrix have a plus sign where the original had a minus?", "start": 641, "end": 701}
+{"id": "18.06-L04-q04", "split": "dev", "lecture_id": "18.06-L04", "question": "For a 3 by 3 matrix, which elimination matrices are used and in what order?", "start": 833, "end": 893}
+{"id": "18.06-L04-q05", "split": "dev", "lecture_id": "18.06-L04", "question": "Why is the product of the inverse elimination matrices nicer than the product of the elimination matrices?", "start": 1025, "end": 1085}
+{"id": "18.06-L04-q06", "split": "dev", "lecture_id": "18.06-L04", "question": "What is the inverse of the elimination matrix that subtracts two times row one from row two?", "start": 1217, "end": 1277}
+{"id": "18.06-L04-q07", "split": "dev", "lecture_id": "18.06-L04", "question": "How can you get L without doing any extra computation?", "start": 1409, "end": 1469}
+{"id": "18.06-L04-q08", "split": "dev", "lecture_id": "18.06-L04", "question": "Is it practical to solve systems with a thousand or a million unknowns, and how does the cost grow?", "start": 1601, "end": 1661}
+{"id": "18.06-L04-q09", "split": "dev", "lecture_id": "18.06-L04", "question": "What counts as one operation when counting the cost of elimination?", "start": 1792, "end": 1852}
+{"id": "18.06-L04-q10", "split": "dev", "lecture_id": "18.06-L04", "question": "Why does each later step of elimination cost less than the first one?", "start": 1984, "end": 2044}
+{"id": "18.06-L04-q11", "split": "dev", "lecture_id": "18.06-L04", "question": "Roughly how many operations does elimination need for an n by n matrix?", "start": 2176, "end": 2236}
+{"id": "18.06-L04-q12", "split": "dev", "lecture_id": "18.06-L04", "question": "Once A is factored, how much does it cost to handle a new right-hand side b?", "start": 2368, "end": 2428}
+{"id": "18.06-L04-q13", "split": "dev", "lecture_id": "18.06-L04", "question": "How do you build the matrices that exchange rows of a 3 by 3 matrix?", "start": 2560, "end": 2620}
+{"id": "18.06-L04-q14", "split": "dev", "lecture_id": "18.06-L04", "question": "Why do permutation matrices form a group, and what is the inverse of a single row exchange?", "start": 2752, "end": 2812}
+{"id": "18.06-L22-q00", "split": "test", "lecture_id": "18.06-L22", "question": "What do you need so that the eigenvector matrix S can be inverted?", "start": 74, "end": 134}
+{"id": "18.06-L22-q01", "split": "test", "lecture_id": "18.06-L22", "question": "When A multiplies the matrix of eigenvectors, where do the eigenvalues show up?", "start": 281, "end": 341}
+{"id": "18.06-L22-q02", "split": "test", "lecture_id": "18.06-L22", "question": "How can A be factored using its eigenvectors and eigenvalues?", "start": 488, "end": 548}
+{"id": "18.06-L22-q03", "split": "test", "lecture_id": "18.06-L22", "question": "What happens to the eigenvalues and eigenvectors when you square a matrix?", "start": 696, "end": 756}
+{"id": "18.06-L22-q04", "split": "test", "lecture_id": "18.06-L22", "question": "What condition on the eigenvalues makes the powers of A go to zero?", "start": 903, "end": 963}
+{"id": "18.06-L22-q05", "split": "test", "lecture_id": "18.06-L22", "question": "Does a random matrix have independent eigenvectors?", "start": 1110, "end": 1170}
+{"id": "18.06-L22-q06", "split": "test", "lecture_id": "18.06-L22", "question": "What goes wrong when you try to diagonalize the triangular matrix 2 1 0 2?", "start": 1318, "end": 1378}
+{"id": "18.06-L22-q07", "split": "test", "lecture_id": "18.06-L22", "question": "Which matrices can't be diagonalized, and why are distinct eigenvalues always fine?", "start": 1525, "end": 1585}
+{"id": "18.06-L22-q08", "split": "test", "lecture_id": "18.06-L22", "question": "How do you actually compute A to the hundredth power times u0 using eigenvectors?", "start": 1733, "end": 1793}
+{"id": "18.06-L22-q09", "split": "test", "lecture_id": "18.06-L22", "question": "What does the coefficient vector c represent when computing high powers of A?", "start": 1940, "end": 2000}
+{"id": "18.06-L22-q10", "split": "test", "lecture_id": "18.06-L22", "question": "How do you turn the Fibonacci recurrence into a first-order matrix system?", "start": 2147, "end": 2207}
+{"id": "18.06-L22-q11", "split": "test", "lecture_id": "18.06-L22", "question": "What can you say about the eigenvalues of the Fibonacci matrix before computing them?", "start": 2355, "end": 2415}
+{"id": "18.06-L22-q12", "split": "test", "lecture_id": "18.06-L22", "question": "Approximately what are the eigenvalues of the Fibonacci matrix?", "start": 2562, "end": 2622}
+{"id": "18.06-L22-q13", "split": "test", "lecture_id": "18.06-L22", "question": "Why does only one eigenvalue matter for how fast Fibonacci numbers grow?", "start": 2769, "end": 2829}
+{"id": "18.06-L22-q14", "split": "test", "lecture_id": "18.06-L22", "question": "What is the key idea for solving a first-order system that evolves in time?", "start": 2977, "end": 3037}
+{"id": "8.04-L04-q00", "split": "dev", "lecture_id": "8.04-L04", "question": "What does the squared magnitude of the wave function represent?", "start": 130, "end": 190}
+{"id": "8.04-L04-q01", "split": "dev", "lecture_id": "8.04-L04", "question": "What does a wave function with a single well-defined wavelength tell you about the particle?", "start": 449, "end": 509}
+{"id": "8.04-L04-q02", "split": "dev", "lecture_id": "8.04-L04", "question": "Is there a natural or preferred basis for describing vectors?", "start": 768, "end": 828}
+{"id": "8.04-L04-q03", "split": "dev", "lecture_id": "8.04-L04", "question": "Does a sine wave that is cut off to a finite length have one wavelength or many?", "start": 1087, "end": 1147}
+{"id": "8.04-L04-q04", "split": "dev", "lecture_id": "8.04-L04", "question": "Why does probing very small features require large momentum?", "start": 1406, "end": 1466}
+{"id": "8.04-L04-q05", "split": "dev", "lecture_id": "8.04-L04", "question": "Does an average value have to be one of the values you can actually observe?", "start": 1725, "end": 1785}
+{"id": "8.04-L04-q06", "split": "dev", "lecture_id": "8.04-L04", "question": "Why is the average deviation useless as a measure of spread, and what is used instead?", "start": 2044, "end": 2104}
+{"id": "8.04-L04-q07", "split": "dev", "lecture_id": "8.04-L04", "question": "How do you compute the expected value of position from the wave function?", "start": 2363, "end": 2423}
+{"id": "8.04-L04-q08", "split": "dev", "lecture_id": "8.04-L04", "question": "What is the expectation value and how do you read the notation out loud?", "start": 2683, "end": 2743}
+{"id": "8.04-L04-q09", "split": "dev", "lecture_id": "8.04-L04", "question": "Can a particle have both a definite position and a definite momentum?", "start": 3002, "end": 3062}
+{"id": "8.04-L04-q10", "split": "dev", "lecture_id": "8.04-L04", "question": "What are the units of h bar, and how do they suggest the form of the momentum operator?", "start": 3321, "end": 3381}
+{"id": "8.04-L04-q11", "split": "dev", "lecture_id": "8.04-L04", "question": "Which potential is translationally invariant, and what is the force in that case?", "start": 3640, "end": 3700}
+{"id": "8.04-L04-q12", "split": "dev", "lecture_id": "8.04-L04", "question": "What does it mean to exponentiate an operator like the derivative?", "start": 3959, "end": 4019}
+{"id": "8.04-L04-q13", "split": "dev", "lecture_id": "8.04-L04", "question": "Does physics tell us what is true, or is quantum mechanics just a model?", "start": 4278, "end": 4338}
+{"id": "8.04-L06-q00", "split": "test", "lecture_id": "8.04-L06", "question": "What fully specifies the state of a particle in quantum mechanics?", "start": 134, "end": 194}
+{"id": "8.04-L06-q01", "split": "test", "lecture_id": "8.04-L06", "question": "What are the eigenfunctions of momentum, and how does that relate to Fourier expansions?", "start": 463, "end": 523}
+{"id": "8.04-L06-q02", "split": "test", "lecture_id": "8.04-L06", "question": "Why is time evolution in quantum mechanics surprisingly simple compared to classical mechanics?", "start": 791, "end": 851}
+{"id": "8.04-L06-q03", "split": "test", "lecture_id": "8.04-L06", "question": "What happens to black holes because of quantum mechanics, and what puzzle does it raise?", "start": 1120, "end": 1180}
+{"id": "8.04-L06-q04", "split": "test", "lecture_id": "8.04-L06", "question": "Can adding infinitely many smooth functions give a discontinuous function?", "start": 1448, "end": 1508}
+{"id": "8.04-L06-q05", "split": "test", "lecture_id": "8.04-L06", "question": "What are the two different kinds of time evolution in quantum mechanics?", "start": 1777, "end": 1837}
+{"id": "8.04-L06-q06", "split": "test", "lecture_id": "8.04-L06", "question": "What kind of differential equation is the Schrodinger equation?", "start": 2106, "end": 2166}
+{"id": "8.04-L06-q07", "split": "test", "lecture_id": "8.04-L06", "question": "Why are numerical solutions valuable even for theorists?", "start": 2434, "end": 2494}
+{"id": "8.04-L06-q08", "split": "test", "lecture_id": "8.04-L06", "question": "How does a state that starts in an energy eigenstate change over time?", "start": 2763, "end": 2823}
+{"id": "8.04-L06-q09", "split": "test", "lecture_id": "8.04-L06", "question": "Why is an energy eigenstate called a stationary state?", "start": 3091, "end": 3151}
+{"id": "8.04-L06-q10", "split": "test", "lecture_id": "8.04-L06", "question": "How is the uncertainty in a measured frequency related to how long you measure?", "start": 3420, "end": 3480}
+{"id": "8.04-L06-q11", "split": "test", "lecture_id": "8.04-L06", "question": "What eigenvalue goes with each momentum eigenfunction?", "start": 3748, "end": 3808}
+{"id": "8.04-L06-q12", "split": "test", "lecture_id": "8.04-L06", "question": "Are the position eigenfunctions, like delta functions, reasonable wave functions themselves?", "start": 4077, "end": 4137}
+{"id": "8.04-L06-q13", "split": "test", "lecture_id": "8.04-L06", "question": "Why is it misleading to call the energy eigenfunction equation the Schrodinger equation?", "start": 4405, "end": 4465}
+{"id": "8.04-L06-q14", "split": "test", "lecture_id": "8.04-L06", "question": "What are the allowed energies of a particle in a box?", "start": 4734, "end": 4794}
+{"id": "5.111-L04-q00", "split": "dev", "lecture_id": "5.111-L04", "question": "What is the threshold frequency in the photoelectric effect?", "start": 60, "end": 120}
+{"id": "5.111-L04-q01", "split": "dev", "lecture_id": "5.111-L04", "question": "Is an electron ejected when the photon energy is less than the work function?", "start": 241, "end": 301}
+{"id": "5.111-L04-q02", "split": "dev", "lecture_id": "5.111-L04", "question": "Does making light more intense increase the energy of each photon?", "start": 421, "end": 481}
+{"id": "5.111-L04-q03", "split": "dev", "lecture_id": "5.111-L04", "question": "What is a photoelectron?", "start": 602, "end": 662}
+{"id": "5.111-L04-q04", "split": "dev", "lecture_id": "5.111-L04", "question": "How do you calculate the energy of a photon from the wavelength of a UV lamp?", "start": 782, "end": 842}
+{"id": "5.111-L04-q05", "split": "dev", "lecture_id": "5.111-L04", "question": "How many photons does a one milliwatt laser pointer emit in a minute?", "start": 963, "end": 1023}
+{"id": "5.111-L04-q06", "split": "dev", "lecture_id": "5.111-L04", "question": "In the classroom demonstration, why do the charged metal pieces move apart?", "start": 1143, "end": 1203}
+{"id": "5.111-L04-q07", "split": "dev", "lecture_id": "5.111-L04", "question": "What happened in the demonstration when the laser pointer and then the UV light were used?", "start": 1324, "end": 1384}
+{"id": "5.111-L04-q08", "split": "dev", "lecture_id": "5.111-L04", "question": "How can a photon have momentum if it has no mass, and what experiment showed it?", "start": 1504, "end": 1564}
+{"id": "5.111-L04-q09", "split": "dev", "lecture_id": "5.111-L04", "question": "What was de Broglie's revolutionary idea about matter?", "start": 1685, "end": 1745}
+{"id": "5.111-L04-q10", "split": "dev", "lecture_id": "5.111-L04", "question": "What is the wavelength of a thrown baseball?", "start": 1865, "end": 1925}
+{"id": "5.111-L04-q11", "split": "dev", "lecture_id": "5.111-L04", "question": "How does how fast a particle moves relate to its wavelength?", "start": 2046, "end": 2106}
+{"id": "5.111-L04-q12", "split": "dev", "lecture_id": "5.111-L04", "question": "Which experiments showed that electrons diffract?", "start": 2226, "end": 2286}
+{"id": "5.111-L04-q13", "split": "dev", "lecture_id": "5.111-L04", "question": "What does the Schrodinger equation describe, and what is a wave function?", "start": 2407, "end": 2467}
+{"id": "5.111-L04-q14", "split": "dev", "lecture_id": "5.111-L04", "question": "Why is the Schrodinger equation written in spherical coordinates for an atom?", "start": 2587, "end": 2647}
+{"id": "5.111-L06-q00", "split": "test", "lecture_id": "5.111-L06", "question": "Which principal quantum number corresponds to the fourth excited state of hydrogen?", "start": 67, "end": 127}
+{"id": "5.111-L06-q01", "split": "test", "lecture_id": "5.111-L06", "question": "How do you change the Rydberg formula for a one-electron ion like lithium 2 plus?", "start": 261, "end": 321}
+{"id": "5.111-L06-q02", "split": "test", "lecture_id": "5.111-L06", "question": "What does the angular momentum quantum number l describe, and what values can it take?", "start": 455, "end": 515}
+{"id": "5.111-L06-q03", "split": "test", "lecture_id": "5.111-L06", "question": "What quantum numbers are needed to describe a wave function?", "start": 649, "end": 709}
+{"id": "5.111-L06-q04", "split": "test", "lecture_id": "5.111-L06", "question": "Which p orbital corresponds to m equal to zero?", "start": 843, "end": 903}
+{"id": "5.111-L06-q05", "split": "test", "lecture_id": "5.111-L06", "question": "Do the 2s and 2p orbitals have the same energy in hydrogen?", "start": 1037, "end": 1097}
+{"id": "5.111-L06-q06", "split": "test", "lecture_id": "5.111-L06", "question": "What do the shell, subshell and orbital correspond to in terms of quantum numbers?", "start": 1232, "end": 1292}
+{"id": "5.111-L06-q07", "split": "test", "lecture_id": "5.111-L06", "question": "How many d orbitals are there, and which one has m equal to zero?", "start": 1426, "end": 1486}
+{"id": "5.111-L06-q08", "split": "test", "lecture_id": "5.111-L06", "question": "Who came up with interpreting the squared wave function as a probability density?", "start": 1620, "end": 1680}
+{"id": "5.111-L06-q09", "split": "test", "lecture_id": "5.111-L06", "question": "How is the hydrogen atom wave function split into parts?", "start": 1814, "end": 1874}
+{"id": "5.111-L06-q10", "split": "test", "lecture_id": "5.111-L06", "question": "What does the 2s wave function look like as you move away from the nucleus?", "start": 2008, "end": 2068}
+{"id": "5.111-L06-q11", "split": "test", "lecture_id": "5.111-L06", "question": "What is a node, and how many nodes does a 3s orbital have?", "start": 2202, "end": 2262}
+{"id": "5.111-L06-q12", "split": "test", "lecture_id": "5.111-L06", "question": "How do you work out the number of radial nodes in a 4p orbital?", "start": 2396, "end": 2456}
+{"id": "5.111-L06-q13", "split": "test", "lecture_id": "5.111-L06", "question": "Why is the radial probability distribution zero at the nucleus?", "start": 2590, "end": 2650}
+{"id": "5.111-L06-q14", "split": "test", "lecture_id": "5.111-L06", "question": "What is the Bohr radius, and why isn't the Bohr model correct?", "start": 2784, "end": 2844}
