@@ -19,16 +19,17 @@ final class SummaryController {
         case failed(String)
     }
 
-    static let modelName = MLXTextGenerator.defaultModel.name
+    static let modelName = ModelProvider.generatorName
 
     private(set) var states: [Lecture.ID: State] = [:]
     private(set) var summaries: [Lecture.ID: LectureSummary] = [:]
 
     private let store: any LectureStore
-    private var generator: MLXTextGenerator?
+    private let models: ModelProvider
 
-    init(store: any LectureStore) {
+    init(store: any LectureStore, models: ModelProvider) {
         self.store = store
+        self.models = models
     }
 
     func state(for lectureID: Lecture.ID) -> State {
@@ -81,16 +82,13 @@ final class SummaryController {
     }
 
     private func loadGenerator(for lectureID: Lecture.ID) async throws -> MLXTextGenerator {
-        if let generator { return generator }
         states[lectureID] = .loadingModel(progress: 0)
-        let loaded = try await MLXTextGenerator.load { progress in
+        return try await models.generator { progress in
             Task { @MainActor in
                 if case .loadingModel = self.states[lectureID] {
                     self.states[lectureID] = .loadingModel(progress: progress)
                 }
             }
         }
-        generator = loaded
-        return loaded
     }
 }

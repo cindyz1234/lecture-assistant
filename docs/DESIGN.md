@@ -40,7 +40,7 @@ flowchart LR
 | Transcription | `TranscriptionEngine`, windowed engine, WhisperKit adapter | WhisperKit `base.en` working |
 | Storage | `LectureStore`; SQLite (GRDB 7.11.1) + in-memory; FTS5 keyword search | done |
 | Summarization | Map-reduce summarizer + MLX adapter (Qwen3-1.7B 4-bit) | working on Mac; iPhone untested |
-| Search | Passages, vector index, hybrid retrieval; MLX embedder (bge-small) | retrieval done; Q&A answers next |
+| Search | Passages, vector index, hybrid retrieval, grounded answers; MLX embedder | done; answers ~1 in 5 wrong (RESULTS.md) |
 
 The app target only wires packages together and renders state. It depends on
 protocols, so tests and previews can use fakes.
@@ -115,6 +115,7 @@ latency further.
   plugin). `swift build`/`swift test` still compile it and run the logic tests.
 - Summaries are stored by migration v2 (`summary`, `summaryPoint`), cascading
   from `lecture`.
+- The LLM is loaded through `ModelProvider`, shared with Q&A.
 
 ### Keyword search: FTS5 inside the lecture database
 - Migration v3 adds `transcriptSegment_ft`, an external-content FTS5 table over
@@ -143,6 +144,21 @@ latency further.
 - `Search` has no ML dependencies and is tested with fakes; `MLXSearch` adapts
   MLX. The Hugging Face downloader is shared with summarization via `MLXSupport`.
 - All choices were made on dev questions; test questions were run once.
+
+### Q&A answers: grounded, cited, checkable
+- The LLM sees the top 5 passages numbered [1]–[5] and must cite them by
+  number (timestamps are ambiguous across lectures). Numbers that aren't among
+  the given passages are removed, so a link never points to an invented moment.
+- It replies NOT_IN_LECTURES (or a recognized decline phrase) when the passages
+  don't answer the question.
+- The Ask screen always shows the source passages: hand-checking found about
+  1 in 5 answers wrong, so users need to be able to verify.
+- "Only this lecture" scopes retrieval to one lecture, avoiding cross-subject
+  confusion such as "L" (lower-triangular matrix) vs. "l" (quantum number).
+- Passages and embeddings are stored by migration v4 with the embedding model's
+  name, so vectors from different models never mix. Lectures are indexed when
+  transcription finishes, and any missing ones when the Ask screen opens.
+- `ModelProvider` loads each model once; summaries and Q&A share the ~1 GB LLM.
 
 ### Imported files are copied into the app container
 Files from the picker are security-scoped. We copy them before processing so

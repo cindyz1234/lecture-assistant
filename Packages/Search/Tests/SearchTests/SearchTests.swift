@@ -49,6 +49,15 @@ struct VectorIndexTests {
         #expect(abs(nearest[0].similarity - 0.9988) < 0.001)
     }
 
+    @Test func returnsStoredVectorsNormalized() {
+        var index = VectorIndex(dimension: 2)
+        index.add([3, 4])
+        index.add([0, 2])
+
+        #expect(index.vector(at: 0) == [0.6, 0.8])
+        #expect(index.vector(at: 1) == [0, 1])
+    }
+
     @Test func handlesEmptyIndexAndZeroK() {
         var index = VectorIndex(dimension: 3)
         #expect(index.nearest(to: [1, 0, 0], k: 5).isEmpty)
@@ -124,5 +133,33 @@ struct HybridRetrieverTests {
 
         let expected = 0.5 / (60.0 + 2) + 1 / (60.0 + 1)
         #expect(abs((results.first?.score ?? 0) - expected) < 1e-9)
+    }
+
+    @Test func scopedRetrieverOnlyReturnsThatLecture() async throws {
+        let otherLecture = UUID()
+        let mine = PassageBuilder.passages(segments, lectureID: lecture, length: .seconds(60), stride: .seconds(60))
+        let theirs = PassageBuilder.passages([segment(0, 60, "Orbital orbital orbital.")], lectureID: otherLecture,
+                                             length: .seconds(60), stride: .seconds(60))
+        let otherHit = SearchHit(lectureID: otherLecture, lectureTitle: "Other", segmentID: theirs[0].segmentIDs[0],
+                                 start: .zero, fragments: [], score: 1)
+        var retriever = try await HybridRetriever.build(passages: mine + theirs, embedder: KeywordEmbedder()) { _, _ in [otherHit] }
+        retriever.keywordWeight = 0.25
+
+        let scoped = retriever.scoped(to: lecture)
+        let results = try await scoped.retrieve("orbital", k: 5)
+
+        #expect(scoped.passages.count == 3 && scoped.keywordWeight == 0.25)
+        #expect(results.allSatisfy { $0.passage.lectureID == lecture })
+        #expect(results.first?.passage.start.seconds == 60)  // the orbital passage, by meaning
+        #expect(try await retriever.retrieve("orbital", k: 5).contains { $0.passage.lectureID == otherLecture })
+    }
+
+    @Test func retrieverFromStoredPassagesMatchesFreshlyBuiltOne() async throws {
+        let embedded = try await PassageIndexer.embed(segments, lectureID: lecture, embedder: KeywordEmbedder())
+        let fromStorage = HybridRetriever(embedded: embedded, embedder: KeywordEmbedder()) { _, _ in [] }
+
+        #expect(embedded.count == 3 && embedded.allSatisfy { $0.model == "fake" })
+        let results = try await fromStorage.retrieve("photon", k: 1, mode: .semantic)
+        #expect(results.first?.passage.text.contains("photon") == true)
     }
 }

@@ -62,6 +62,21 @@ enum Schema {
             }
         }
 
+        migrator.registerMigration("v4: Q&A passages with embeddings") { db in
+            try db.create(table: "passage") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("lectureId", .text).notNull().indexed()
+                    .references("lecture", onDelete: .cascade)
+                t.column("startMs", .integer).notNull()
+                t.column("endMs", .integer).notNull()
+                t.column("text", .text).notNull()
+                t.column("segmentIds", .text).notNull()  // JSON array of segment UUIDs
+                t.column("embedding", .blob).notNull()   // Float32 values, native byte order
+                // Vectors from different models aren't comparable; keep them apart.
+                t.column("embeddingModel", .text).notNull()
+            }
+        }
+
         return migrator
     }
 }

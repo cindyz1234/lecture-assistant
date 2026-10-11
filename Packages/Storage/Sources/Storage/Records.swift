@@ -107,3 +107,45 @@ struct SummaryPointRecord: Codable, FetchableRecord, PersistableRecord {
         SummaryItem(text: text, start: LectureTime(milliseconds: startMs))
     }
 }
+
+struct PassageRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "passage"
+
+    var id: Int64?
+    var lectureId: String
+    var startMs: Int64
+    var endMs: Int64
+    var text: String
+    var segmentIds: String
+    var embedding: Data
+    var embeddingModel: String
+
+    enum Columns {
+        static let lectureId = Column(CodingKeys.lectureId)
+        static let startMs = Column(CodingKeys.startMs)
+        static let embeddingModel = Column(CodingKeys.embeddingModel)
+    }
+
+    init(_ embedded: EmbeddedPassage) throws {
+        let passage = embedded.passage
+        lectureId = passage.lectureID.uuidString
+        startMs = passage.start.milliseconds
+        endMs = passage.end.milliseconds
+        text = passage.text
+        segmentIds = String(decoding: try JSONEncoder().encode(passage.segmentIDs), as: UTF8.self)
+        embedding = embedded.vector.withUnsafeBufferPointer { Data(buffer: $0) }
+        embeddingModel = embedded.model
+    }
+
+    func model() throws -> EmbeddedPassage {
+        guard let lecture = UUID(uuidString: lectureId) else { throw StorageCorruption.invalidID(lectureId) }
+        let segments = try JSONDecoder().decode([UUID].self, from: Data(segmentIds.utf8))
+        let vector = embedding.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+        return EmbeddedPassage(
+            passage: Passage(lectureID: lecture, start: LectureTime(milliseconds: startMs),
+                             end: LectureTime(milliseconds: endMs), text: text, segmentIDs: segments),
+            vector: vector,
+            model: embeddingModel
+        )
+    }
+}

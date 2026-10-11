@@ -180,6 +180,45 @@ public final class SQLiteLectureStore: LectureStore {
         return fragments
     }
 
+    public func savePassages(_ passages: [EmbeddedPassage], for lectureID: Lecture.ID) async throws {
+        let id = lectureID.uuidString
+        let records = try passages.map(PassageRecord.init)
+        try await database.write { db in
+            guard try LectureRecord.exists(db, key: id) else {
+                throw LectureStoreError.lectureNotFound(lectureID)
+            }
+            try PassageRecord.filter(PassageRecord.Columns.lectureId == id).deleteAll(db)
+            for record in records {
+                try record.insert(db)
+            }
+        }
+    }
+
+    public func embeddedPassages(model: String) async throws -> [EmbeddedPassage] {
+        try await database.read { db in
+            try PassageRecord
+                .filter(PassageRecord.Columns.embeddingModel == model)
+                .order(PassageRecord.Columns.lectureId, PassageRecord.Columns.startMs)
+                .fetchAll(db)
+                .map { try $0.model() }
+        }
+    }
+
+    public func lecturesMissingPassages(model: String) async throws -> [Lecture.ID] {
+        try await database.read { db in
+            try String.fetchAll(db, sql: """
+                SELECT id FROM lecture
+                WHERE status = 'complete'
+                  AND NOT EXISTS (SELECT 1 FROM passage WHERE passage.lectureId = lecture.id AND embeddingModel = ?)
+                ORDER BY createdAt
+                """, arguments: [model])
+            .map { id in
+                guard let uuid = UUID(uuidString: id) else { throw StorageCorruption.invalidID(id) }
+                return uuid
+            }
+        }
+    }
+
     public func deleteLecture(_ lectureID: Lecture.ID) async throws {
         // Segments and the summary are removed by ON DELETE CASCADE foreign keys.
         _ = try await database.write { db in

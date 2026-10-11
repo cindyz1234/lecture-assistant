@@ -262,6 +262,38 @@ returns to the same idea later (Fibonacci eigenvalues at 45:35) or another
 lecture covers it (the Schrödinger equation in 8.04 L5); the other 2 are a few
 minutes before their window.
 
+## Q&A answers (Qwen3-1.7B 4-bit, grounded in retrieved passages)
+
+The model gets the top 5 passages numbered [1]–[5] and must cite them; citation
+numbers not among the given passages are removed. `Tools/qaeval --answers`.
+
+| Metric | Dev v1 prompt | Dev v2 prompt | **Test (v2, run once)** |
+|---|---:|---:|---:|
+| Cited a correct passage (strict window) | 4/44 | 25/44 | **29/45 (0.64)** |
+| Citation precision (strict window) | 4/12 | 31/76 | 38/73 (0.52) |
+| Off-topic questions declined | 13/15 | 14/15 | 14/15* |
+| Lecture questions answered | 44/44 | 43/44 | 45/45 |
+| Median seconds per answer (Mac) | 1.8 | 1.9 | 1.7 |
+
+v1 → v2: the citation instruction moved from the system prompt to right after
+the question (v1 produced 12 citations in 44 answers), LaTeX is converted to
+plain text, and declines in the model's own words are recognized.
+
+\* Not held out: the 15 off-topic questions also ran during dev iterations and
+one decline phrasing was added after reading a dev run. Split them next time.
+
+**Hand-checked sample** (every 5th test question, 9 answers): 7 correct, 2 wrong
+(the Fibonacci first-order system was described incorrectly; the
+frequency–time uncertainty relation was reversed and contradicted itself).
+Most citations the strict metric marks wrong support the answer from another
+place (e.g. 18.06 L5 on transposes). Failures to know about:
+- Ambiguous short questions across subjects: "How can you get L…" (the
+  lower-triangular matrix) retrieved chemistry's quantum number l and was
+  answered confidently about that. Asking within one lecture avoids this.
+- One off-topic question (sourdough) was answered with a citation to an
+  unrelated passage: a valid citation number doesn't mean the passage
+  supports the claim.
+
 ## On-device performance
 
 RTF (real-time factor) = processing time / audio duration. Lower is better; target < 0.3.

@@ -37,6 +37,7 @@ let package = Package(
             .product(name: "Storage", package: "Storage"),
             .product(name: "Search", package: "Search"),
             .product(name: "MLXSearch", package: "Search"),
+            .product(name: "MLXSummarization", package: "Summarization"),
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
         ]),
         .executableTarget(name: "searchbench", dependencies: [
