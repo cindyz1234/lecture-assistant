@@ -28,6 +28,12 @@ struct Transcribe: AsyncParsableCommand {
     @Option(help: "WhisperKit model variant, e.g. base.en or small.en.")
     var model = "base.en"
 
+    @Option(help: "Local WhisperKit model folder (e.g. a fine-tuned model); overrides --model.")
+    var modelFolder: String?
+
+    @Option(help: "Retries for low-confidence windows (WhisperKit default 5). They sample randomly, so use 0 for repeatable results.")
+    var temperatureFallback = WhisperKitWindowTranscriber.defaultTemperatureFallbackCount
+
     @Option(help: "Seconds of audio per model call (the app uses 30 for files).")
     var window = 30
 
@@ -45,13 +51,19 @@ struct Transcribe: AsyncParsableCommand {
         try FileManager.default.createDirectory(at: outDirectory, withIntermediateDirectories: true)
         let timings = try CSVLog(
             url: outDirectory.appendingPathComponent("timings.csv"),
-            header: ["lecture_id", "model", "window_s", "audio_s", "elapsed_s", "rtf", "device", "date"]
+            header: ["lecture_id", "model", "fallback", "window_s", "audio_s", "elapsed_s", "rtf", "device", "date"]
         )
 
         let clock = ContinuousClock()
         let loadStart = clock.now
-        let transcriber = try await WhisperKitWindowTranscriber.load(model: model)
-        log("Loaded \(model) in \(format(clock.now - loadStart))")
+        let modelName = modelFolder.map { URL(fileURLWithPath: $0).lastPathComponent } ?? model
+        let transcriber = if let modelFolder {
+            try await WhisperKitWindowTranscriber.load(
+                modelFolder: URL(fileURLWithPath: modelFolder), temperatureFallbackCount: temperatureFallback)
+        } else {
+            try await WhisperKitWindowTranscriber.load(model: model, temperatureFallbackCount: temperatureFallback)
+        }
+        log("Loaded \(modelName) (temperature fallback \(temperatureFallback)) in \(format(clock.now - loadStart))")
 
         for path in files {
             let input = URL(fileURLWithPath: path)
@@ -79,7 +91,7 @@ struct Transcribe: AsyncParsableCommand {
             try encoder.encode(segments).write(to: outDirectory.appendingPathComponent("\(name).segments.json"))
             let rtf = elapsed.seconds / audio.seconds
             try timings.append([
-                name, model, String(window),
+                name, modelName, String(temperatureFallback), String(window),
                 String(format: "%.1f", audio.seconds),
                 String(format: "%.2f", elapsed.seconds),
                 String(format: "%.4f", rtf),

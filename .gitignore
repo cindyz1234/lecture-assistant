@@ -14,6 +14,7 @@
 *.avi
 ml/data/raw/
 ml/data/processed/
+ml/data/clips/
 
 # --- Secrets ---
 .env
@@ -41,12 +42,14 @@ App/Config/Local.xcconfig
 __pycache__/
 *.pyc
 .venv/
+.venv-train/
 venv/
 .pytest_cache/
 
 # --- ML artifacts ---
 ml/eval/outputs/
 ml/training/checkpoints/
+ml/training/coreml/
 *.mlpackage
 *.mlmodelc
 *.safetensors

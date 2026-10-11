@@ -1,0 +1,13 @@
+# Training + Core ML conversion dependencies (large). Kept separate from
+# ml/requirements.txt so CI and the evaluation scripts don't need PyTorch.
+#
+# Versions match whisperkittools (the WhisperKit converter), which pins
+# torch 2.5.0 / transformers 4.53 and notes conversion failures on others.
+# Training in the same environment rules out save/load mismatches.
+# torch 2.5.0 needs Python <= 3.12:
+#   python3.12 -m venv .venv-train && .venv-train/bin/pip install -r ml/training/requirements.txt
+-r ../requirements.txt
+torch==2.5.0
+transformers==4.53.0
+numpy<2.4.0
+whisperkit @ git+https://github.com/argmaxinc/whisperkittools@84f77a83c8f530022ae55fbb1a64b3351ef63c7a

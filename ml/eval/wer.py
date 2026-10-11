@@ -14,6 +14,7 @@ import argparse
 import csv
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 import jiwer
@@ -67,6 +68,8 @@ def normalize(text: str) -> str:
         text = text.replace(symbol, words)
     text = _ORDINAL.sub(lambda match: f" {num2words(int(match.group(1)), to='ordinal')} ", text)
     text = _NUMBER.sub(lambda match: f" {_spell_number(match)} ", text)  # "3x" -> "three x"
+    # Strip accents so "Schrödinger" and "Schrodinger" compare equal.
+    text = "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c))
     text = text.lower().replace("-", " ").replace("’", "'")
     text = _NON_WORD.sub(" ", text)
     text = re.sub(r"(?<![a-z])'|'(?![a-z])", " ", text)  # quotes, keep apostrophes in words
@@ -80,6 +83,16 @@ def find_transcripts(directory: Path) -> dict[str, Path]:
 def load_split(manifest: Path, split: str) -> set[str]:
     with manifest.open(newline="") as f:
         return {row["lecture_id"] for row in csv.DictReader(f) if row["split"] == split}
+
+
+def select_lectures(references: set[str], hypotheses: set[str], split: set[str] | None) -> tuple[set[str], set[str]]:
+    """Lectures to score, and lectures that should be scored but have no hypothesis.
+
+    Only lectures in `split` (when given) count as missing, so scoring the test
+    split doesn't warn about train lectures that weren't transcribed.
+    """
+    wanted = references & split if split is not None else references
+    return wanted & hypotheses, wanted - hypotheses
 
 
 def evaluate(pairs: dict[str, tuple[str, str]]) -> tuple[list[tuple[str, int, float]], float]:
@@ -102,14 +115,13 @@ def main() -> int:
 
     references = find_transcripts(args.ref_dir)
     hypotheses = find_transcripts(args.hyp_dir)
-    ids = references.keys() & hypotheses.keys()
-    if args.manifest:
-        ids &= load_split(args.manifest, args.split)
+    split = load_split(args.manifest, args.split) if args.manifest else None
+    ids, missing = select_lectures(set(references), set(hypotheses), split)
+    for lecture_id in sorted(missing):
+        print(f"warning: no hypothesis for {lecture_id}", file=sys.stderr)
     if not ids:
         print("No matching reference/hypothesis pairs found.", file=sys.stderr)
         return 1
-    for missing in sorted(references.keys() - hypotheses.keys()):
-        print(f"warning: no hypothesis for {missing}", file=sys.stderr)
 
     pairs = {
         lecture_id: (normalize(read_transcript(references[lecture_id])),

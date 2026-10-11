@@ -34,20 +34,81 @@ The most frequent substitutions fall into three groups:
 
 Math has the highest WER: dense notation spoken as letters ("A k", "lambda one").
 
-### Run-to-run variation
+### Run-to-run variation and temperature fallback
 
-Re-running the same model on the same audio gave a different result
-(2026-10-11, rerun to produce timestamped transcripts):
+Re-running the same model on the same audio gave different results. WhisperKit
+retries low-confidence windows with random sampling ("temperature fallback");
+turning it off makes runs identical but much worse (2026-10-11):
 
-| Run | 18.06 | 5.111 | 8.04 | Overall |
-|---|---:|---:|---:|---:|
-| 1 (baseline above) | 8.99% | 4.10% | 7.13% | 6.62% |
-| 2 | 10.08% | 4.13% | 7.21% | 6.90% |
+| Decoding | Run | 18.06 | 5.111 | 8.04 | Overall | Identical runs? |
+|---|---|---:|---:|---:|---:|---|
+| Fallback on (default, as in the app) | 1 | 8.99% | 4.10% | 7.13% | 6.62% | no |
+| | 2 | 10.08% | 4.13% | 7.21% | 6.90% | |
+| Fallback off | 1 | 13.41% | 4.09% | 10.16% | 9.03% | yes |
+| | 2 | 13.41% | 4.09% | 10.16% | 9.03% | |
 
-Segment counts also differed (e.g. 993 vs. 957 for 5.111). The likely cause is
-WhisperKit's temperature fallback, which re-decodes low-confidence windows with
-random sampling. Until decoding is made deterministic, compare models by the
-mean over several runs: a single-run difference under ~0.3 points is noise.
+Fallback rescues windows where decoding fails (mostly 18.06 and 8.04), so the
+app keeps it on. **Models are compared with fallback on, as the mean of 3 runs**;
+the fallback-off score is reported as a secondary, exactly repeatable metric.
+
+### Technical-term recall
+
+`ml/eval/term_recall.py` with `ml/eval/terms.txt` (65 terms chosen from the
+courses' syllabus topics, not from model errors). base.en, fallback on, run 2:
+
+| Lecture | Term occurrences | Term recall | Most missed |
+|---|---:|---:|---|
+| 18.06 L22 | 233 | 97.4% | eigenvector (2), determinant (2) |
+| 5.111 L6 | 373 | 97.3% | bohr (5), radial (5) |
+| 8.04 L6 | 438 | 93.4% | schrodinger (15: "Schrader", "Schreini", …), eigenfunction (6) |
+| **Overall** | 1,044 | **95.7%** | |
+
+## Fine-tuning Whisper base.en (v1, Mac)
+
+Fine-tuned `openai/whisper-base.en` on the 8 training lectures (957 clips,
+7.4 h, timestamped caption targets) on the Mac GPU: 4 epochs, lr 1e-5 with
+warm-up and linear decay, effective batch 16, encoder conv front end frozen.
+27 minutes. Best epoch chosen by dev WER (7.016 L4). Both models were converted
+with the same `ml/training/export_coreml.sh` and run through the app pipeline
+(`transcribe`, fallback on), 3 runs each.
+
+| Metric | Stock base.en (our conversion) | Fine-tuned v1 |
+|---|---:|---:|
+| Test WER, mean of 3 (range) | **7.24%** (7.12–7.36) | 7.63% (7.36–7.92) |
+| Term recall, mean of 3 | **95.1%** | 94.3% |
+| General speech (LibriSpeech, 300 utt.) | 5.04% | 5.00% |
+| Dev WER, clip level (selection metric) | 9.01% | **4.71%** |
+| Size / RTF (Mac) | 140 MB / 0.02 | 140 MB / 0.02 |
+
+**Result: no improvement on the test set.** WER is 0.39 points higher and the
+3-run ranges only touch (7.12–7.36 vs 7.36–7.92), so v1 is not better and
+probably slightly worse, despite a 48% drop in dev WER. General speech is
+unchanged (no forgetting).
+
+Why (8.04 L6, the largest regression):
+- "Schrodinger" never occurs in the 8.04 training captions; the model's
+  spelling drifted to "Schrader" (34 vs 2 substitutions over 2 runs).
+- Number formatting shifted toward the captions' style ("hundred" → "point",
+  "and" → "zero"), scored as errors.
+- Some prefixes were lost ("nonlinear" → "linear", "eigenfunction" → "function").
+- Fewer, longer segments (1,360 vs 1,850; median 3.0 s vs 2.2 s), so the
+  model's timestamp behavior changed too.
+- Hypothesis rejected: caption style removing fillers ("um") — neither the
+  references nor either model contain any.
+
+**Design flaw:** the dev lecture (biology) is not a subject in the test set, so
+dev WER could not show the physics regression. v2 needs a dev set drawn from
+the test courses.
+
+### Pipeline findings along the way
+
+| Finding | Effect |
+|---|---|
+| Converting stock base.en with our pinned whisperkittools differs from Argmax's published base.en (fallback off: 7.63% vs 9.03%; on: 7.24% vs ~6.8%) | Fine-tuned models are compared only with our own converted stock model |
+| torch 2.5 (required by the converter) crashes in conv1d backward on Apple GPUs | Encoder conv front end frozen (<1% of weights) |
+| Batch 8 needs 21.3 GB GPU memory; varying label lengths grew the allocator cache to OOM | Batch 4 × 4 accumulation; labels padded to multiples of 64; memory flat at 10–11 GB |
+| Greedy decoding loops on some clips (70 → 509 words), dev WER 17.9% | Dev decoding with temperature fallback and a fixed seed: 9.0%, repeatable |
+| Default Whisper fine-tuning targets have no timestamps | Targets built from caption cue times, since the app decodes with timestamps |
 
 ## Summarization (Qwen3-1.7B 4-bit, MLX)
 

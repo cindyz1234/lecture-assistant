@@ -1,0 +1,73 @@
+# Technical terms for term-recall evaluation, one per line (phrases allowed).
+# Chosen from the courses' syllabus topics, NOT from model errors, so the
+# metric doesn't favor any particular model. Plurals match automatically.
+# Changing this list requires re-scoring every model.
+
+# 18.06 Linear Algebra
+eigenvalue
+eigenvector
+determinant
+diagonalization
+diagonalize
+diagonal matrix
+identity matrix
+inverse
+transpose
+symmetric
+orthogonal
+linear combination
+null space
+column space
+pivot
+elimination
+permutation
+Fibonacci
+
+# 8.04 Quantum Physics I
+wave function
+Schrodinger
+Hamiltonian
+operator
+eigenstate
+eigenfunction
+expectation value
+uncertainty principle
+momentum
+superposition
+probability density
+Planck
+Fourier
+normalization
+stationary state
+energy eigenstate
+
+# 5.111 Principles of Chemical Science
+orbital
+quantum number
+principal quantum number
+angular momentum
+Bohr
+radial
+nucleus
+electron
+photon
+ionization energy
+binding energy
+hydrogen atom
+wavelength
+spectroscopy
+Rydberg
+
+# 7.016 Introductory Biology
+amino acid
+peptide
+protein
+enzyme
+lipid
+membrane
+hydrophobic
+hydrophilic
+covalent
+hydrogen bond
+metabolism
+substrate
