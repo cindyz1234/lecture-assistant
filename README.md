@@ -77,6 +77,15 @@ Benchmark transcript search on 100+ hours built from those transcripts:
 swift run -c release --package-path Tools searchbench --hours 100 ml/eval/outputs/base.en/*.segments.json
 ```
 
+Evaluate Q&A retrieval (recall@k over the question set, searching all lectures):
+
+```sh
+xcodebuild build -scheme qaeval -destination platform=macOS -configuration Release \
+    -derivedDataPath Tools/.xcbuild -skipMacroValidation -skipPackagePluginValidation -workspace Tools
+Tools/.xcbuild/Build/Products/Release/qaeval --split test --keyword-weight 0.25 \
+    --transcripts ml/eval/outputs/base.en --transcripts ml/eval/outputs/base.en-traindev
+```
+
 In Xcode, the first build asks you to **Trust & Enable** the MLX package's
 macros and build plugin.
 

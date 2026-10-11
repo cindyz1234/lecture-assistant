@@ -11,6 +11,7 @@ let package = Package(
         .package(path: "../Packages/Transcription"),
         .package(path: "../Packages/Summarization"),
         .package(path: "../Packages/Storage"),
+        .package(path: "../Packages/Search"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
     ],
     targets: [
@@ -28,6 +29,14 @@ let package = Package(
             .product(name: "Shared", package: "Shared"),
             .product(name: "Summarization", package: "Summarization"),
             .product(name: "MLXSummarization", package: "Summarization"),
+            .product(name: "ArgumentParser", package: "swift-argument-parser"),
+        ]),
+        .executableTarget(name: "qaeval", dependencies: [
+            "ToolSupport",
+            .product(name: "Shared", package: "Shared"),
+            .product(name: "Storage", package: "Storage"),
+            .product(name: "Search", package: "Search"),
+            .product(name: "MLXSearch", package: "Search"),
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
         ]),
         .executableTarget(name: "searchbench", dependencies: [

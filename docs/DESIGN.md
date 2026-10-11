@@ -40,7 +40,7 @@ flowchart LR
 | Transcription | `TranscriptionEngine`, windowed engine, WhisperKit adapter | WhisperKit `base.en` working |
 | Storage | `LectureStore`; SQLite (GRDB 7.11.1) + in-memory; FTS5 keyword search | done |
 | Summarization | Map-reduce summarizer + MLX adapter (Qwen3-1.7B 4-bit) | working on Mac; iPhone untested |
-| Search | Keyword search lives in Storage (FTS5); this package is for semantic search | protocol only |
+| Search | Passages, vector index, hybrid retrieval; MLX embedder (bge-small) | retrieval done; Q&A answers next |
 
 The app target only wires packages together and renders state. It depends on
 protocols, so tests and previews can use fakes.
@@ -129,6 +129,20 @@ latency further.
   skip ranking: scoring every match of "the" took 165 ms at 200 hours.
 - It lives in `Storage`, not `Search`, because the index is part of the lecture
   database; `Search` is reserved for embedding-based and hybrid search.
+
+### Q&A retrieval: hybrid search over overlapping passages
+- The retrieval unit is a ~60 s passage of consecutive segments, starting every
+  30 s, so an idea crossing one boundary is whole in a neighbor.
+- Semantic search embeds passages with bge-small-en-v1.5 (MLX, 384 dimensions)
+  and compares a question against every passage (exact search: 100 hours is
+  ~12k vectors, ~18 MB).
+- Keyword search reuses FTS5 with any-word matching (a whole question never
+  matches every word in one segment). A passage takes its best segment's rank.
+- Rankings are fused with Reciprocal Rank Fusion, keyword weighted 0.25: equal
+  weights let generic question words pull in wrong passages.
+- `Search` has no ML dependencies and is tested with fakes; `MLXSearch` adapts
+  MLX. The Hugging Face downloader is shared with summarization via `MLXSupport`.
+- All choices were made on dev questions; test questions were run once.
 
 ### Imported files are copied into the app container
 Files from the picker are security-scoped. We copy them before processing so

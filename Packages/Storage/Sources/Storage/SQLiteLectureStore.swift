@@ -117,7 +117,7 @@ public final class SQLiteLectureStore: LectureStore {
         }
     }
 
-    public func searchTranscripts(_ query: String, limit: Int) async throws -> [SearchHit] {
+    public func searchTranscripts(_ query: String, limit: Int, matching: SearchMatching) async throws -> [SearchHit] {
         let terms = SearchTerms(query)
         // Ranking every match by relevance was the dominant cost for very common
         // words (165 ms for "the" over 200 hours). Stopword-only queries are
@@ -125,8 +125,12 @@ public final class SQLiteLectureStore: LectureStore {
         let rank = !terms.isStopwordsOnly
         // FTS5Pattern quotes each word, so user input can't inject FTS5 syntax
         // (AND, NEAR, quotes, *); it returns nil when there are no words.
-        guard limit > 0, let pattern = FTS5Pattern(matchingAllPrefixesIn: terms.searched.joined(separator: " "))
-        else { return [] }
+        let words = terms.searched.joined(separator: " ")
+        let pattern = switch matching {
+        case .allWords: FTS5Pattern(matchingAllPrefixesIn: words)
+        case .anyWord: FTS5Pattern(matchingAnyTokenIn: words)
+        }
+        guard limit > 0, let pattern else { return [] }
         return try await database.read { db in
             try Row.fetchAll(db, sql: """
                 SELECT s.id, s.lectureId, s.startMs, l.title,

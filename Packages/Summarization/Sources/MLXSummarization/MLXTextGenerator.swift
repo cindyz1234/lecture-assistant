@@ -1,8 +1,8 @@
 import Foundation
-import HuggingFace
 import MLXHuggingFace
 import MLXLLM
 import MLXLMCommon
+import MLXSupport
 import Shared
 import Summarization
 import Tokenizers
@@ -50,35 +50,4 @@ public struct MLXTextGenerator: TextGenerator {
         )
         return try await session.respond(to: prompt)
     }
-}
-
-/// Downloads Hugging Face snapshots into a cache directory we choose, rather
-/// than the library default (`~/.cache/huggingface`).
-private struct HubDownloader: MLXLMCommon.Downloader {
-    let cacheDirectory: URL
-
-    func download(
-        id: String,
-        revision: String?,
-        matching patterns: [String],
-        useLatest: Bool,
-        progressHandler: @Sendable @escaping (Progress) -> Void
-    ) async throws -> URL {
-        guard let repo = Repo.ID(rawValue: id) else { throw HubDownloaderError.invalidRepositoryID(id) }
-        let client = HubClient(
-            host: URL(string: "https://huggingface.co")!,
-            tokenProvider: .none,
-            cache: HubCache(cacheDirectory: cacheDirectory)
-        )
-        return try await client.downloadSnapshot(
-            of: repo,
-            revision: revision ?? "main",
-            matching: patterns,
-            progressHandler: { progress in progressHandler(progress) }
-        )
-    }
-}
-
-enum HubDownloaderError: Error, Equatable {
-    case invalidRepositoryID(String)
 }

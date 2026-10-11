@@ -19,11 +19,29 @@ public protocol LectureStore: Sendable {
     func saveSummary(_ summary: LectureSummary, for lectureID: Lecture.ID) async throws
     /// The lecture's summary, or `nil` if it hasn't been summarized.
     func summary(for lectureID: Lecture.ID) async throws -> LectureSummary?
-    /// Transcript segments, across all lectures, containing every word of
-    /// `query` (each word may be a prefix: "eigen" finds "eigenvalue"), most
-    /// relevant first. Very common words ("the", "is") are ignored unless the
-    /// query has nothing else. Returns no results for a query without words.
-    func searchTranscripts(_ query: String, limit: Int) async throws -> [SearchHit]
+    /// Transcript segments across all lectures, most relevant first.
+    ///
+    /// With `.allWords` (the search box), a segment must contain every word of
+    /// `query`, each of which may be a prefix ("eigen" finds "eigenvalue").
+    /// With `.anyWord` (Q&A retrieval), any word matches and ranking favors
+    /// segments with more and rarer words. Very common words ("the", "is") are
+    /// ignored unless the query has nothing else. A query without words finds nothing.
+    func searchTranscripts(_ query: String, limit: Int, matching: SearchMatching) async throws -> [SearchHit]
+}
+
+/// How search treats the words of a query.
+public enum SearchMatching: Sendable {
+    /// Every word must appear (as a prefix) in the segment.
+    case allWords
+    /// Any word may appear; more and rarer matching words rank higher.
+    case anyWord
+}
+
+extension LectureStore {
+    /// Search-box search: every word must appear.
+    public func searchTranscripts(_ query: String, limit: Int) async throws -> [SearchHit] {
+        try await searchTranscripts(query, limit: limit, matching: .allWords)
+    }
 }
 
 /// The words a search looks for: the query's words minus stopwords, or all of
@@ -95,7 +113,7 @@ public actor InMemoryLectureStore: LectureStore {
     }
 
     /// Simple prefix matching without stemming or relevance ranking, for previews.
-    public func searchTranscripts(_ query: String, limit: Int) -> [SearchHit] {
+    public func searchTranscripts(_ query: String, limit: Int, matching: SearchMatching) -> [SearchHit] {
         let terms = SearchTerms(query).searched
         guard !terms.isEmpty, limit > 0 else { return [] }
         var hits: [SearchHit] = []
@@ -103,8 +121,8 @@ public actor InMemoryLectureStore: LectureStore {
             guard let lecture = lecturesByID[lectureID] else { continue }
             for segment in segments {
                 let words = Self.words(in: segment.text.lowercased())
-                let matchesAll = terms.allSatisfy { term in words.contains { $0.hasPrefix(term) } }
-                guard matchesAll else { continue }
+                let matched = terms.filter { term in words.contains { $0.hasPrefix(term) } }
+                guard matching == .anyWord ? !matched.isEmpty : matched.count == terms.count else { continue }
                 let fragments = Self.fragments(segment.text) { word in terms.contains { word.lowercased().hasPrefix($0) } }
                 hits.append(SearchHit(
                     lectureID: lectureID, lectureTitle: lecture.title, segmentID: segment.id,
