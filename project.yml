@@ -46,6 +46,9 @@ targets:
       - package: Transcription
         product: WhisperKitTranscription
       - package: Storage
+      - package: Summarization
+      - package: Summarization
+        product: MLXSummarization
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cindyzhao.lectureassistant
@@ -59,6 +62,6 @@ targets:
         INFOPLIST_KEY_NSMicrophoneUsageDescription: Lecture Assistant records lectures so it can transcribe them on this device.
         ENABLE_APP_SANDBOX: YES
         ENABLE_USER_SELECTED_FILES: readonly
-        # Only used to download the speech model on first launch.
+        # Only used to download the speech and language models on first use.
         ENABLE_OUTGOING_NETWORK_CONNECTIONS: YES
         CODE_SIGN_STYLE: Automatic

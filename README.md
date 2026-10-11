@@ -21,7 +21,7 @@ project.yml     XcodeGen spec for the app project
 
 ## Getting started
 
-Requirements: macOS 15+, Xcode 16+, [XcodeGen](https://github.com/yonaskolb/XcodeGen), Python 3.11+, ffmpeg.
+Requirements: macOS 15+, Xcode 26+ (with the Metal toolchain), [XcodeGen](https://github.com/yonaskolb/XcodeGen), Python 3.11+, ffmpeg.
 
 ```sh
 brew install xcodegen ffmpeg
@@ -58,6 +58,20 @@ python3 ml/eval/check_reference.py --ref-dir ml/data/raw --hyp-dir ml/eval/outpu
 python3 ml/eval/wer.py --ref-dir ml/data/raw --hyp-dir ml/eval/outputs/base.en \
     --manifest ml/data/manifest.csv --split test
 ```
+
+Summarize the transcripts with the on-device LLM (MLX needs an xcodebuild build
+for its Metal shaders; first run downloads Qwen3-1.7B 4-bit, ~940 MB):
+
+```sh
+xcodebuild -downloadComponent MetalToolchain   # once, Xcode 26+
+xcodebuild build -scheme summarize -destination platform=macOS -configuration Release \
+    -derivedDataPath Tools/.xcbuild -skipMacroValidation -skipPackagePluginValidation -workspace Tools
+Tools/.xcbuild/Build/Products/Release/summarize --out ml/eval/outputs/summaries \
+    ml/eval/outputs/base.en/*.segments.json
+```
+
+In Xcode, the first build asks you to **Trust & Enable** the MLX package's
+macros and build plugin.
 
 ## Data and attribution
 

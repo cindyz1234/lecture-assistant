@@ -25,7 +25,7 @@ public actor WhisperKitWindowTranscriber: AudioWindowTranscriber {
     /// - Parameters:
     ///   - model: A variant from `argmaxinc/whisperkit-coreml`, e.g. `"base.en"`.
     ///   - language: Spoken language code, or `nil` to auto-detect.
-    ///   - downloadBase: Where models are cached. Defaults to `defaultModelDirectory()`.
+    ///   - downloadBase: Where models are cached. Defaults to `ModelStorage.directory()`.
     ///   - progress: Download progress in `0...1`.
     public static func load(
         model: String,
@@ -33,7 +33,7 @@ public actor WhisperKitWindowTranscriber: AudioWindowTranscriber {
         downloadBase: URL? = nil,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async throws -> WhisperKitWindowTranscriber {
-        let downloadBase = try downloadBase ?? defaultModelDirectory()
+        let downloadBase = try downloadBase ?? ModelStorage.directory()
         let modelFolder = try await WhisperKit.download(variant: model, downloadBase: downloadBase) { downloadProgress in
             progress?(downloadProgress.fractionCompleted)
         }
@@ -47,22 +47,6 @@ public actor WhisperKitWindowTranscriber: AudioWindowTranscriber {
         )
         let whisperKit = try await WhisperKit(config)
         return WhisperKitWindowTranscriber(whisperKit: whisperKit, language: language)
-    }
-
-    /// `Application Support/LectureAssistant/Models`, excluded from backups.
-    ///
-    /// WhisperKit's own default is `Documents/huggingface`, which iOS backs up to
-    /// iCloud and which on macOS (outside the sandbox) is the user's Documents folder.
-    public static func defaultModelDirectory() throws -> URL {
-        var directory = try FileManager.default
-            .url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-            .appendingPathComponent("LectureAssistant/Models", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        // Models can be downloaded again, so don't spend the user's backup space on them.
-        var values = URLResourceValues()
-        values.isExcludedFromBackup = true
-        try directory.setResourceValues(values)
-        return directory
     }
 
     public func transcribe(window: [Float]) async throws -> [WindowSegment] {

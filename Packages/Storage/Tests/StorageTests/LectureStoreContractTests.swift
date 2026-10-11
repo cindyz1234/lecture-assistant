@@ -115,6 +115,64 @@ struct LectureStoreContractTests {
     }
 
     @Test(arguments: Implementation.allCases)
+    func roundTripsSummaryInOrder(_ implementation: Implementation) async throws {
+        let store = try implementation.makeStore()
+        let lecture = Lecture(title: "L1", createdAt: date(0))
+        try await store.save(lecture)
+        let summary = LectureSummary(overview: "Eigenvalues.", keyPoints: [
+            SummaryItem(text: "Definition", start: LectureTime(milliseconds: 5_000)),
+            SummaryItem(text: "Determinant", start: LectureTime(milliseconds: 2_000)),
+        ])
+
+        #expect(try await store.summary(for: lecture.id) == nil)
+        try await store.saveSummary(summary, for: lecture.id)
+
+        // Points come back in the order they were saved, not re-sorted.
+        #expect(try await store.summary(for: lecture.id) == summary)
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func savingSummaryReplacesPreviousOne(_ implementation: Implementation) async throws {
+        let store = try implementation.makeStore()
+        let lecture = Lecture(title: "L1", createdAt: date(0))
+        try await store.save(lecture)
+        try await store.saveSummary(LectureSummary(overview: "Old", keyPoints: [
+            SummaryItem(text: "a", start: .zero), SummaryItem(text: "b", start: .zero), SummaryItem(text: "c", start: .zero),
+        ]), for: lecture.id)
+
+        let replacement = LectureSummary(overview: "New", keyPoints: [SummaryItem(text: "only", start: .zero)])
+        try await store.saveSummary(replacement, for: lecture.id)
+
+        #expect(try await store.summary(for: lecture.id) == replacement)
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func deletingLectureAlsoDeletesItsSummary(_ implementation: Implementation) async throws {
+        let store = try implementation.makeStore()
+        let lecture = Lecture(title: "L1", createdAt: date(0))
+        try await store.save(lecture)
+        try await store.saveSummary(LectureSummary(overview: "S", keyPoints: [SummaryItem(text: "p", start: .zero)]), for: lecture.id)
+
+        try await store.deleteLecture(lecture.id)
+        try await store.save(lecture)
+
+        #expect(try await store.summary(for: lecture.id) == nil)
+    }
+
+    @Test(arguments: Implementation.allCases)
+    func rejectsSummaryForUnknownLecture(_ implementation: Implementation) async throws {
+        let store = try implementation.makeStore()
+        let missing = UUID()
+
+        await #expect(throws: LectureStoreError.lectureNotFound(missing)) {
+            try await store.saveSummary(LectureSummary(overview: "", keyPoints: []), for: missing)
+        }
+        await #expect(throws: LectureStoreError.lectureNotFound(missing)) {
+            _ = try await store.summary(for: missing)
+        }
+    }
+
+    @Test(arguments: Implementation.allCases)
     func deletingUnknownLectureIsNoOp(_ implementation: Implementation) async throws {
         let store = try implementation.makeStore()
         try await store.deleteLecture(UUID())

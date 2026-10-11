@@ -9,14 +9,24 @@ let package = Package(
         .package(path: "../Packages/Shared"),
         .package(path: "../Packages/AudioCapture"),
         .package(path: "../Packages/Transcription"),
+        .package(path: "../Packages/Summarization"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
     ],
     targets: [
+        .target(name: "ToolSupport"),
         .executableTarget(name: "transcribe", dependencies: [
+            "ToolSupport",
             .product(name: "Shared", package: "Shared"),
             .product(name: "AudioCapture", package: "AudioCapture"),
             .product(name: "Transcription", package: "Transcription"),
             .product(name: "WhisperKitTranscription", package: "Transcription"),
+            .product(name: "ArgumentParser", package: "swift-argument-parser"),
+        ]),
+        .executableTarget(name: "summarize", dependencies: [
+            "ToolSupport",
+            .product(name: "Shared", package: "Shared"),
+            .product(name: "Summarization", package: "Summarization"),
+            .product(name: "MLXSummarization", package: "Summarization"),
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
         ]),
     ]

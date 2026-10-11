@@ -13,8 +13,12 @@ public protocol LectureStore: Sendable {
     func append(_ segments: [TranscriptSegment], to lectureID: Lecture.ID) async throws
     /// Segments for a lecture, ordered by start time.
     func segments(for lectureID: Lecture.ID) async throws -> [TranscriptSegment]
-    /// Deletes the lecture and its segments. Does nothing if it doesn't exist.
+    /// Deletes the lecture, its segments and its summary. Does nothing if it doesn't exist.
     func deleteLecture(_ lectureID: Lecture.ID) async throws
+    /// Saves the lecture's summary, replacing any previous one.
+    func saveSummary(_ summary: LectureSummary, for lectureID: Lecture.ID) async throws
+    /// The lecture's summary, or `nil` if it hasn't been summarized.
+    func summary(for lectureID: Lecture.ID) async throws -> LectureSummary?
 }
 
 public enum LectureStoreError: Error, Equatable {
@@ -24,6 +28,7 @@ public enum LectureStoreError: Error, Equatable {
 public actor InMemoryLectureStore: LectureStore {
     private var lecturesByID: [Lecture.ID: Lecture] = [:]
     private var segmentsByLecture: [Lecture.ID: [TranscriptSegment]] = [:]
+    private var summariesByLecture: [Lecture.ID: LectureSummary] = [:]
 
     public init() {}
 
@@ -48,5 +53,16 @@ public actor InMemoryLectureStore: LectureStore {
     public func deleteLecture(_ lectureID: Lecture.ID) {
         lecturesByID[lectureID] = nil
         segmentsByLecture[lectureID] = nil
+        summariesByLecture[lectureID] = nil
+    }
+
+    public func saveSummary(_ summary: LectureSummary, for lectureID: Lecture.ID) throws {
+        guard lecturesByID[lectureID] != nil else { throw LectureStoreError.lectureNotFound(lectureID) }
+        summariesByLecture[lectureID] = summary
+    }
+
+    public func summary(for lectureID: Lecture.ID) throws -> LectureSummary? {
+        guard lecturesByID[lectureID] != nil else { throw LectureStoreError.lectureNotFound(lectureID) }
+        return summariesByLecture[lectureID]
     }
 }

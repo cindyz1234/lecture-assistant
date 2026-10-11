@@ -39,7 +39,7 @@ flowchart LR
 | AudioDSP | Resample, VAD, ring buffer (C++) | protocol only |
 | Transcription | `TranscriptionEngine`, windowed engine, WhisperKit adapter | WhisperKit `base.en` working |
 | Storage | `LectureStore`; SQLite (GRDB 7.11.1) + in-memory | SQLite done; FTS5 in Phase 4 |
-| Summarization | `Summarizer` protocol | protocol only |
+| Summarization | Map-reduce summarizer + MLX adapter (Qwen3-1.7B 4-bit) | working on Mac; iPhone untested |
 | Search | `SearchIndex` protocol | protocol only |
 
 The app target only wires packages together and renders state. It depends on
@@ -95,6 +95,26 @@ latency further.
 - Segments are written as they arrive, so a crash keeps everything transcribed
   so far. A lecture still marked `transcribing` at launch is marked `interrupted`.
 - The same contract tests run against `SQLiteLectureStore` and `InMemoryLectureStore`.
+
+### Summarization: map-reduce with code-selected key points
+- A 1-hour transcript (~9k words) is split into ~1,200-word chunks. **Map:** the
+  LLM lists 2 timestamped ideas per chunk. **Reduce:** it writes a 3–4 sentence
+  overview from all chunk ideas.
+- Key points are chosen by code (first point per chunk, evenly spaced), not by
+  the model. Measured: when Qwen3-1.7B selected points itself, every point came
+  from the first ~40% of the lecture.
+- The model sees transcript lines as `[m:ss] text` and answers `[m:ss] idea`.
+  Every returned time is snapped to a real segment in its chunk, so links never
+  point to a moment that doesn't exist.
+- The logic depends on a `TextGenerator` protocol and is tested with a scripted
+  fake; `MLXSummarization` is a separate target (same pattern as WhisperKit).
+- The LLM loads on first use, not at launch (~1 GB), and runs with greedy
+  decoding and Qwen3's thinking mode disabled.
+- MLX compiles Metal shaders, so anything that *runs* MLX must be built with
+  xcodebuild (needs the Metal toolchain and trusting the package's macros and
+  plugin). `swift build`/`swift test` still compile it and run the logic tests.
+- Summaries are stored by migration v2 (`summary`, `summaryPoint`), cascading
+  from `lecture`.
 
 ### Imported files are copied into the app container
 Files from the picker are security-scoped. We copy them before processing so

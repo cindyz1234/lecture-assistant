@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import Shared
 import Testing
 @testable import Storage
@@ -30,5 +31,34 @@ struct SQLiteLectureStoreTests {
         _ = try SQLiteLectureStore(url: url)
         // Would throw "table lecture already exists" if v1 ran again.
         _ = try SQLiteLectureStore(url: url)
+    }
+
+    /// A database written by an app version that only had migration v1 must
+    /// keep its lectures when the current version opens it and runs v2.
+    @Test func upgradingFromV1KeepsExistingLectures() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("lectures.sqlite")
+        let lectureID = UUID()
+
+        do {
+            let oldDatabase = try DatabaseQueue(path: url.path)
+            try Schema.migrator.migrate(oldDatabase, upTo: "v1: lectures and transcript segments")
+            try await oldDatabase.write { db in
+                try db.execute(
+                    sql: "INSERT INTO lecture (id, title, createdAt, durationMs, status) VALUES (?, ?, ?, ?, ?)",
+                    arguments: [lectureID.uuidString, "Old lecture", Date(timeIntervalSince1970: 0), 60_000, "complete"]
+                )
+                #expect(try !db.tableExists("summary"))
+            }
+        }
+
+        let store = try SQLiteLectureStore(url: url)
+
+        #expect(try await store.lectures().map(\.title) == ["Old lecture"])
+        let summary = LectureSummary(overview: "Added after upgrade", keyPoints: [])
+        try await store.saveSummary(summary, for: lectureID)
+        #expect(try await store.summary(for: lectureID) == summary)
     }
 }

@@ -81,3 +81,29 @@ struct SegmentRecord: Codable, FetchableRecord, PersistableRecord {
 enum StorageCorruption: Error, Equatable {
     case invalidID(String)
 }
+
+struct SummaryRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "summary"
+
+    var lectureId: String
+    var overview: String
+    var createdAt: Date
+}
+
+struct SummaryPointRecord: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "summaryPoint"
+
+    var lectureId: String
+    var position: Int
+    var startMs: Int64
+    var text: String
+
+    enum Columns {
+        static let lectureId = Column(CodingKeys.lectureId)
+        static let position = Column(CodingKeys.position)
+    }
+
+    func model() -> SummaryItem {
+        SummaryItem(text: text, start: LectureTime(milliseconds: startMs))
+    }
+}

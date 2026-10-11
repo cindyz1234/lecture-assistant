@@ -12,7 +12,8 @@ concurrency:
 jobs:
   packages:
     name: Swift packages
-    runs-on: macos-15
+    # MLX (via mlx-swift 0.31.6) needs Swift tools 6.3, i.e. Xcode 26 or newer.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - run: swift --version
@@ -32,19 +33,24 @@ jobs:
 
   app:
     name: App (iOS + macOS)
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+      - run: xcodebuild -version
+      # Xcode 26+ ships the Metal compiler separately; MLX compiles Metal shaders.
+      - run: xcodebuild -downloadComponent MetalToolchain
       - run: brew install xcodegen
       - run: xcodegen generate
       - name: Build for macOS
         run: >
           xcodebuild build -project LectureAssistant.xcodeproj -scheme LectureAssistant
           -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO
+          -skipMacroValidation -skipPackagePluginValidation
       - name: Build for iOS
         run: >
           xcodebuild build -project LectureAssistant.xcodeproj -scheme LectureAssistant
           -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO
+          -skipMacroValidation -skipPackagePluginValidation
 
   python:
     name: ML scripts
