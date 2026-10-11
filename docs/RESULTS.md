@@ -110,6 +110,51 @@ the test courses.
 | Greedy decoding loops on some clips (70 → 509 words), dev WER 17.9% | Dev decoding with temperature fallback and a fixed seed: 9.0%, repeatable |
 | Default Whisper fine-tuning targets have no timestamps | Targets built from caption cue times, since the app decodes with timestamps |
 
+## Fine-tuning Whisper base.en (v2, Mac)
+
+Changes from v1, all decided before looking at test results:
+- **Dev set from the test courses** (lecture 4 of 18.06, 8.04, 5.111; 2.8 h),
+  fixing v1's biology-only dev set. 7.016 L4 moved to train.
+- **More data in the test courses:** lecture 5 of each (train: 12 lectures, 11.1 h).
+- **Gentler training:** lr 5e-6 (v1: 1e-5), 3 epochs.
+- Two configurations, chosen between on dev only: v2a (full model) and v2b
+  (encoder frozen, decoder only). Full-dev WER 7.79% vs 7.82%, a tie; the
+  tie-break rule, stated before testing, was "pick the more constrained
+  model", so **v2b** was evaluated. v2a was never run on the test set.
+
+| Metric | Stock base.en (our conversion) | v1 | **v2b** |
+|---|---:|---:|---:|
+| Test WER, mean of 3 (range) | **7.24%** (7.12–7.36) | 7.63% | 7.58% (7.49–7.67) |
+| Term recall, mean of 3 | 95.1% | 94.3% | **97.5%** (97.4–97.6) |
+| Missed technical terms (of 1,044) | ~51 | ~60 | **~26** |
+| General speech (LibriSpeech), mean of 3 | **5.04%** | 5.00% | 5.62% (5.42–5.92) |
+| Training time (Mac GPU) | – | 27 min | 21 min |
+
+**Result: technical-term errors halved; overall WER and general speech not
+improved.**
+
+What changed (substitution counts summed over 3 runs, v2b minus stock):
+- Fixed (real vocabulary): Bohr→"bore" −14, Schrodinger→"Schreini"/"straining"
+  −12, eigenfunctions→"functions" −8, determinant→"determinate" −6.
+- Broke (mostly formatting copied from captions): the course number. Test
+  captions write "804", two training lectures' captions write "8.04"; the model
+  learned "8.04" and each mention scores ~3 errors (hundred→"point" +18,
+  and→"zero" +18; ~0.1 points of WER). Also hundredth→"hundred",
+  zero→"naught", and notation spacing ("Ax"→"x").
+- Not a real fix: principle→principal −9. The test captions misspell
+  "principal quantum number" as "principle"; the model learned the
+  captioners' misspelling.
+
+Takeaways:
+- Caption formatting is inconsistent across lectures, so WER penalizes the
+  model for copying one captioner's style. Term recall is the cleaner measure
+  of what fine-tuning targets.
+- Decoder-only training still moved general-speech WER (+0.6 points): language
+  habits live in the decoder.
+- Next options: a formatting-insensitive scorer (numbers, notation), mixing
+  general speech into training to stop forgetting, or a larger model (needs a
+  cloud GPU).
+
 ## Summarization (Qwen3-1.7B 4-bit, MLX)
 
 Map-reduce over the base.en transcripts of the test lectures, run with

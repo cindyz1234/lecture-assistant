@@ -39,10 +39,14 @@ Chosen before any measurement. Lecture 1s (mostly logistics) are skipped.
 
 | Course | train | dev | test |
 |---|---|---|---|
-| 18.06 Linear Algebra (Spring 2010) | L2, L3 | | L22 |
-| 8.04 Quantum Physics I (Spring 2013) | L2, L3 | | L6 |
-| 5.111 Principles of Chemical Science (Fall 2008) | L2, L3 | | L6 |
-| 7.016 Introductory Biology (Fall 2018) | L2, L3 | L4 | |
+| 18.06 Linear Algebra (Spring 2010) | L2, L3, L5 | L4 | L22 |
+| 8.04 Quantum Physics I (Spring 2013) | L2, L3, L5 | L4 | L6 |
+| 5.111 Principles of Chemical Science (Fall 2008) | L2, L3, L5 | L4 | L6 |
+| 7.016 Introductory Biology (Fall 2018) | L2, L3, L4 | | |
+
+v2 (2026-10-11) added lectures 4 and 5 of the three test courses and moved
+dev to lecture 4 of each test course (it was 7.016 L4), so the dev set has the
+same subjects as the test set.
 
 The reference transcripts are OCW's caption files (`.vtt`).
 
@@ -60,8 +64,9 @@ model accuracy.
 ## Usage
 
 ```sh
-python3 ml/data/download.py              # all rows
-python3 ml/data/download.py --split test # only the test split
+python3 ml/data/download.py                              # all rows
+python3 ml/data/download.py --split test                 # only the test split
+python3 ml/data/download.py --split train --delete-video # keep only audio + captions
 ```
 
 Outputs:

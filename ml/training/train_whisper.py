@@ -21,7 +21,6 @@ import random
 import subprocess
 import sys
 import time
-import wave
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -62,12 +61,13 @@ def build_labels(cues: list[list[Any]], tokenizer: TokenizerLike) -> list[int]:
     return labels
 
 
-def read_wav(path: Path) -> list[float] | Any:
-    """16-bit mono WAV -> float32 numpy array in [-1, 1]."""
+def read_audio(example: dict[str, Any]) -> Any:
+    """A clip's audio, read from its lecture WAV, as float32 numpy in [-1, 1]."""
     import numpy as np
 
-    with wave.open(str(path), "rb") as source:
-        frames = source.readframes(source.getnframes())
+    from make_dataset import read_clip
+
+    frames = read_clip(ROOT / example["audio"], example["start"], example["end"])
     return np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
 
 
@@ -98,7 +98,11 @@ def main() -> int:
     parser.add_argument("--freeze-encoder", action="store_true", help="train only the decoder")
     parser.add_argument("--max-train", type=int, help="use only the first N training clips (smoke tests)")
     parser.add_argument("--max-dev", type=int, help="use only the first N dev clips")
+    parser.add_argument("--dev-stride", type=int, default=1,
+                        help="evaluate every Nth dev clip (keeps all dev lectures, cuts evaluation time)")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--eval-only", action="store_true",
+                        help="only report dev WER for --model (e.g. a checkpoint), without training or saving")
     args = parser.parse_args()
 
     import jiwer
@@ -126,12 +130,12 @@ def main() -> int:
     total = sum(p.numel() for p in model.parameters())
 
     train = load_examples(args.train, args.max_train)
-    dev = load_examples(args.dev, args.max_dev)
+    dev = load_examples(args.dev, args.max_dev)[::args.dev_stride]
     print(f"device={device} train={len(train)} clips dev={len(dev)} clips "
           f"trainable={trainable / 1e6:.1f}M of {total / 1e6:.1f}M parameters", flush=True)
 
     def features(batch: list[dict[str, Any]]) -> torch.Tensor:
-        audio = [read_wav(ROOT / example["audio"]) for example in batch]
+        audio = [read_audio(example) for example in batch]
         return processor.feature_extractor(audio, sampling_rate=16_000, return_tensors="pt").input_features.to(device)
 
     def labels(batch: list[dict[str, Any]]) -> torch.Tensor:
@@ -201,6 +205,10 @@ def main() -> int:
         print(json.dumps(values), flush=True)
 
     started = time.time()
+    if args.eval_only:
+        print(json.dumps({"model": args.model, "dev_clips": len(dev), "dev_wer": round(dev_wer(), 4),
+                          "minutes": round((time.time() - started) / 60, 1)}), flush=True)
+        return 0
     best_wer = dev_wer()
     log(epoch=0, step=0, dev_wer=round(best_wer, 4), minutes=round((time.time() - started) / 60, 1))
     model.save_pretrained(run_dir / "best")

@@ -1,7 +1,7 @@
 import wave
 from pathlib import Path
 
-from make_dataset import Clip, Cue, clean_caption_text, cut_clip, group_cues, parse_vtt, relative_cues
+from make_dataset import Clip, Cue, clean_caption_text, group_cues, parse_vtt, read_clip, relative_cues
 
 VTT = """WEBVTT
 
@@ -56,7 +56,7 @@ def test_group_cues_drops_cues_longer_than_max() -> None:
     assert [c.text for c in group_cues(cues, max_seconds=30)] == ["short", "after"]
 
 
-def test_cut_clip_copies_the_requested_range(tmp_path: Path) -> None:
+def test_read_clip_returns_the_requested_range(tmp_path: Path) -> None:
     source_path = tmp_path / "lecture.wav"
     with wave.open(str(source_path), "wb") as out:
         out.setnchannels(1)
@@ -64,9 +64,8 @@ def test_cut_clip_copies_the_requested_range(tmp_path: Path) -> None:
         out.setframerate(16_000)
         out.writeframes(bytes(range(256)) * 250)  # 64,000 bytes = 2 s of 16-bit audio
 
-    with wave.open(str(source_path), "rb") as source:
-        cut_clip(source, 0.5, 1.25, tmp_path / "clip" / "0.wav")
+    frames = read_clip(source_path, 0.5, 1.25)
 
-    with wave.open(str(tmp_path / "clip" / "0.wav"), "rb") as clip:
-        assert clip.getframerate() == 16_000
-        assert clip.getnframes() == 12_000  # 0.75 s
+    assert len(frames) == 12_000 * 2  # 0.75 s of 16-bit samples
+    assert frames[:2] == (bytes(range(256)) * 250)[16_000:16_002]
+    assert read_clip(source_path, 1.9, 5.0) == (bytes(range(256)) * 250)[60_800:]  # clamped at the end
