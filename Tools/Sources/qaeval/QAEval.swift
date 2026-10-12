@@ -168,7 +168,8 @@ struct QAEval: AsyncParsableCommand {
         guard let llmConfiguration = MLXTextGenerator.candidates[llm] else {
             throw ValidationError("Unknown --llm \(llm); use \(MLXTextGenerator.candidates.keys.sorted().joined(separator: ", ")).")
         }
-        let generator = try await MLXTextGenerator.load(llmConfiguration)
+        let model = try await MLXTextGenerator.load(llmConfiguration)
+        let generator = UsageRecorder(model: model)
         var answerer = QuestionAnswerer(retriever: retriever, generator: generator)
         answerer.lectureTitles = Dictionary(uniqueKeysWithValues: lectureIDs.map { ($0.value, $0.key) })
         let output = answersOut.flatMap { path -> FileHandle? in
@@ -216,14 +217,23 @@ struct QAEval: AsyncParsableCommand {
         let n = Double(questions.count)
         times.sort()
         print("")
-        print("| Answers (\(generator.modelID)) | Value |")
+        print("| Answers (\(model.modelID)) | Value |")
         print("|---|---:|")
         print(String(format: "| Lecture questions answered | %.2f (%d/%d) |", Double(answered) / n, answered, questions.count))
         print(String(format: "| Cited a correct passage | %.2f (%d/%d) |", Double(citedCorrectly) / n, citedCorrectly, questions.count))
         print(String(format: "| Citation precision | %.2f (%d/%d) |", citations > 0 ? Double(correctCitations) / Double(citations) : 0, correctCitations, citations))
         print(String(format: "| Off-topic questions declined | %.2f (%d/%d) |", Double(declined) / Double(max(offTopic.count, 1)), declined, offTopic.count))
         print(String(format: "| Median seconds per answer | %.1f |", times[times.count / 2]))
-        print(String(format: "| Peak process memory (MB) | %.0f |", Machine.peakMemoryMB()))
+        let usages = await generator.usages
+        func median(_ values: [Double]) -> Double {
+            let sorted = values.sorted()
+            return sorted.isEmpty ? 0 : sorted[sorted.count / 2]
+        }
+        print(String(format: "| Prompt tokens per request (median) | %.0f |", median(usages.map { Double($0.promptTokens) })))
+        print(String(format: "| Generated tokens per request (median) | %.0f |", median(usages.map { Double($0.generatedTokens) })))
+        print(String(format: "| Prefill tokens/s (median) | %.0f |", median(usages.map(\.promptTokensPerSecond))))
+        print(String(format: "| Generation tokens/s (median) | %.1f |", median(usages.map(\.generationTokensPerSecond))))
+        print(String(format: "| Time to first token, s (median) | %.2f |", median(usages.map(\.promptSeconds))))
     }
 
     private func isCorrect(_ passage: Passage, lectureID: Lecture.ID, question: Question) -> Bool {
@@ -234,5 +244,21 @@ struct QAEval: AsyncParsableCommand {
 
     private func lectureName(_ id: Lecture.ID, _ ids: [String: Lecture.ID]) -> String {
         ids.first { $0.value == id }?.key ?? "?"
+    }
+}
+
+/// Passes generation through to the model and keeps each call's usage.
+actor UsageRecorder: TextGenerator {
+    let model: MLXTextGenerator
+    private(set) var usages: [GenerationUsage] = []
+
+    init(model: MLXTextGenerator) {
+        self.model = model
+    }
+
+    func generate(instructions: String, prompt: String, maxTokens: Int) async throws -> String {
+        let (text, usage) = try await model.generateWithUsage(instructions: instructions, prompt: prompt, maxTokens: maxTokens)
+        usages.append(usage)
+        return text
     }
 }

@@ -331,6 +331,27 @@ tire?" with a wave-function integral and FDA vaccine approval from general
 knowledge with a citation. Qwen3-4B's one non-decline (pour-over coffee) came
 from a lecture passage that really mentions pouring hot coffee.
 
+### Token throughput and per-request budget (Q&A, Mac15,6)
+
+From MLX's generation statistics (`qaeval --answers`), medians over the 44
+dev questions. Quality numbers matched the earlier dev run exactly (greedy
+decoding is deterministic).
+
+| | Qwen3-1.7B | Qwen3-4B | Qwen3.5-2B |
+|---|---:|---:|---:|
+| Generation tokens/s | 104 | 49 | 104 |
+| Prefill (prompt) tokens/s | 1,265 | 498 | 1,208 |
+| Time to first token | 0.88 s | 2.31 s | 0.94 s |
+| Prompt tokens / request | 1,149 | 1,149 | 1,154 |
+| Generated tokens / request | 58 | 62 | 64 |
+| Seconds per answer | 1.6 | 3.7 | 1.7 |
+
+Requests are ~95% input tokens (5 passages + question). For Qwen3-4B,
+reading the prompt is 2.3 s of the 3.7 s per answer, so the main latency lever
+is a shorter prompt (fewer or shorter passages), to be checked against
+recall@5. Marginal cost per request is $0 on-device; the hosted-model
+equivalent is ~1,150 input + ~60 output tokens at that model's price.
+
 ### Summaries with Qwen3-4B
 
 Same summarizer and prompts, test lectures, Mac:
