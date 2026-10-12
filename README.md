@@ -89,6 +89,15 @@ Tools/.xcbuild/Build/Products/Release/qaeval --split test --keyword-weight 0.25 
 In Xcode, the first build asks you to **Trust & Enable** the MLX package's
 macros and build plugin.
 
+### Troubleshooting
+
+- **`unable to spawn process '.../MetalToolchain-…/metal' (No such file or directory)`**
+  after a restart: macOS mounts the Metal toolchain at a new path, and SwiftPM's
+  cache still points at the old one. Delete the package's `.build` folder (e.g.
+  `rm -rf Packages/Summarization/.build`) and build again.
+- **Xcode can't find a type that exists** (e.g. `cannot find 'ModelProvider' in
+  scope`): new files were added; quit Xcode and run `xcodegen generate`.
+
 ## Data and attribution
 
 Evaluation and training audio comes from

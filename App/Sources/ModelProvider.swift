@@ -12,11 +12,20 @@ final class ModelProvider {
     private var generatorTask: Task<MLXTextGenerator, any Error>?
     private var embedderTask: Task<MLXTextEmbedder, any Error>?
 
-    static var generatorName: String { MLXTextGenerator.defaultModel.name }
+    /// Qwen3-4B answered more questions correctly and declined off-topic ones
+    /// far more reliably (docs/RESULTS.md), but needs ~2.1 GB. iPhone stays on
+    /// Qwen3-1.7B (~0.9 GB) until memory there has been measured.
+    #if os(macOS)
+    static let generatorModel = MLXTextGenerator.candidates["qwen3-4b"]!
+    #else
+    static let generatorModel = MLXTextGenerator.candidates["qwen3-1.7b"]!
+    #endif
+
+    static var generatorName: String { generatorModel.name }
 
     /// - Parameter progress: Download progress in `0...1` (only the first caller's is reported).
     func generator(progress: (@Sendable (Double) -> Void)? = nil) async throws -> MLXTextGenerator {
-        let task = generatorTask ?? Task { try await MLXTextGenerator.load(progress: progress) }
+        let task = generatorTask ?? Task { try await MLXTextGenerator.load(Self.generatorModel, progress: progress) }
         generatorTask = task
         do {
             return try await task.value
