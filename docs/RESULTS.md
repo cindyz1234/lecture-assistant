@@ -294,6 +294,64 @@ place (e.g. 18.06 L5 on transposes). Failures to know about:
   unrelated passage: a valid citation number doesn't mean the passage
   supports the claim.
 
+### Larger answering model (2026-10-11)
+
+Candidates: Qwen3-1.7B (current), Qwen3-4B, Qwen3.5-2B, all 4-bit MLX. The
+off-topic set was split first: the 15 questions used during prompt tuning
+became dev, and 15 new ones (never run before) became test.
+
+Dev (44 questions), chosen on these:
+
+| Dev | Qwen3-1.7B | **Qwen3-4B** | Qwen3.5-2B |
+|---|---:|---:|---:|
+| Cited a correct passage | 25/44 | **30/44** | 23/44 |
+| Citation precision | 0.41 | **0.45** | 0.38 |
+| Off-topic declined | 14/15 | 15/15 | 15/15 |
+| Blind-graded sample (11 each): correct / partial / wrong | 7 / 3 / 1 | **9 / 2 / 0** | 4 / 4 / 3 |
+| Size on disk | 937 MB | 2.1 GB | 1.6 GB |
+| Median seconds per answer (Mac) | 1.7 | 3.9 | 1.7 |
+
+Blind grading: the 33 sampled answers were shuffled and coded, graded against
+the lecture windows, and only then matched to models.
+(The tool's peak-memory figure was dropped: it misses MLX's GPU allocations.)
+
+Test (45 questions + 15 new off-topic), Qwen3-4B chosen on dev; 1.7B shown
+for comparison:
+
+| Test | Qwen3-1.7B | **Qwen3-4B** |
+|---|---:|---:|
+| Cited a correct passage | 29/45 | **32/45** |
+| Citation precision | 0.52 | **0.55** |
+| Off-topic declined (held out) | 10/15 | **14/15** |
+| Median seconds per answer (Mac) | 1.6 | 3.9 |
+
+The held-out off-topic set shows the earlier 14/15 for 1.7B was optimistic:
+on new questions it declined 10/15, answering e.g. "How do you change a flat
+tire?" with a wave-function integral and FDA vaccine approval from general
+knowledge with a citation. Qwen3-4B's one non-decline (pour-over coffee) came
+from a lecture passage that really mentions pouring hot coffee.
+
+### Summaries with Qwen3-4B
+
+Same summarizer and prompts, test lectures, Mac:
+
+| Lecture | Length | Qwen3-1.7B | Qwen3-4B |
+|---|---|---:|---:|
+| 18.06 L22 | 51:50 | 18.5 s | 41.9 s |
+| 5.111 L6 | 48:31 | 23.3 s | 60.2 s |
+| 8.04 L6 | 1:22:18 | 39.4 s | 95.7 s |
+
+About 2.5× slower: ~50–75 s per 60 minutes of lecture, so the "60-minute
+lecture in < 60 s" target is missed for denser lectures. Quality is clearly
+better on 18.06 L22: the 1.7B factual error ("the square root of 5 is
+approximately 1.618") is gone (4B: "the golden ratio, approximately 1.618,
+which is an eigenvalue"), diagonalization is stated correctly (A = SΛS⁻¹),
+and every key point is a sentence in the model's own words, with no copied
+transcript lines. One lecture checked by hand; no errors found in it.
+
+**App choice:** Qwen3-4B on Mac, Qwen3-1.7B on iPhone until memory there is
+measured (4B: ~2.1 GB on disk, ~2.3 GB peak process memory on the Mac).
+
 ## On-device performance
 
 RTF (real-time factor) = processing time / audio duration. Lower is better; target < 0.3.

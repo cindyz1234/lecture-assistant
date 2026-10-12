@@ -56,6 +56,9 @@ struct QAEval: AsyncParsableCommand {
     @Flag(help: "Also generate answers with the on-device LLM and score citations and declining.")
     var answers = false
 
+    @Option(help: "Answering model for --answers: qwen3-1.7b, qwen3-4b or qwen3.5-2b.")
+    var llm = "qwen3-1.7b"
+
     @Option(help: "Off-topic questions the lectures don't cover (JSONL), for --answers.")
     var unanswerable = "ml/eval/qa_unanswerable.jsonl"
 
@@ -154,6 +157,7 @@ struct QAEval: AsyncParsableCommand {
 
     struct OffTopicQuestion: Decodable {
         let id: String
+        let split: String
         let question: String
     }
 
@@ -161,7 +165,10 @@ struct QAEval: AsyncParsableCommand {
     /// moment, how precise its citations are, and whether it declines off-topic questions.
     private func evaluateAnswers(_ questions: [Question], retriever: HybridRetriever, lectureIDs: [String: Lecture.ID]) async throws {
         let clock = ContinuousClock()
-        let generator = try await MLXTextGenerator.load()
+        guard let llmConfiguration = MLXTextGenerator.candidates[llm] else {
+            throw ValidationError("Unknown --llm \(llm); use \(MLXTextGenerator.candidates.keys.sorted().joined(separator: ", ")).")
+        }
+        let generator = try await MLXTextGenerator.load(llmConfiguration)
         var answerer = QuestionAnswerer(retriever: retriever, generator: generator)
         answerer.lectureTitles = Dictionary(uniqueKeysWithValues: lectureIDs.map { ($0.value, $0.key) })
         let output = answersOut.flatMap { path -> FileHandle? in
@@ -198,6 +205,7 @@ struct QAEval: AsyncParsableCommand {
         let offTopic = try String(contentsOfFile: unanswerable, encoding: .utf8)
             .split(whereSeparator: \.isNewline)
             .map { try JSONDecoder().decode(OffTopicQuestion.self, from: Data($0.utf8)) }
+            .filter { split == "all" || $0.split == split }
         var declined = 0
         for question in offTopic {
             let answer = try await answerer.answer(question.question)
@@ -215,6 +223,7 @@ struct QAEval: AsyncParsableCommand {
         print(String(format: "| Citation precision | %.2f (%d/%d) |", citations > 0 ? Double(correctCitations) / Double(citations) : 0, correctCitations, citations))
         print(String(format: "| Off-topic questions declined | %.2f (%d/%d) |", Double(declined) / Double(max(offTopic.count, 1)), declined, offTopic.count))
         print(String(format: "| Median seconds per answer | %.1f |", times[times.count / 2]))
+        print(String(format: "| Peak process memory (MB) | %.0f |", Machine.peakMemoryMB()))
     }
 
     private func isCorrect(_ passage: Passage, lectureID: Lecture.ID, question: Question) -> Bool {

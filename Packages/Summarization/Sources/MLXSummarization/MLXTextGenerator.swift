@@ -12,6 +12,13 @@ public struct MLXTextGenerator: TextGenerator {
     /// Qwen3 1.7B, 4-bit (~940 MB).
     public static let defaultModel = LLMRegistry.qwen3_1_7b_4bit
 
+    /// Models compared for Q&A and summaries, by short name.
+    public static let candidates: [String: ModelConfiguration] = [
+        "qwen3-1.7b": LLMRegistry.qwen3_1_7b_4bit,
+        "qwen3-4b": LLMRegistry.qwen3_4b_4bit,
+        "qwen3.5-2b": LLMRegistry.qwen3_5_2b_4bit,
+    ]
+
     /// Hugging Face ID of the loaded model.
     public let modelID: String
     private let container: ModelContainer

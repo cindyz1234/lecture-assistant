@@ -1,15 +1,30 @@
-{"id": "offtopic-q00", "split": "test", "question": "What year did World War II end?"}
-{"id": "offtopic-q01", "split": "test", "question": "What is the capital of Australia?"}
-{"id": "offtopic-q02", "split": "test", "question": "Who wrote Pride and Prejudice?"}
-{"id": "offtopic-q03", "split": "test", "question": "How do you reverse a linked list in Python?"}
-{"id": "offtopic-q04", "split": "test", "question": "What causes inflation in an economy?"}
-{"id": "offtopic-q05", "split": "test", "question": "How many players are on a soccer team?"}
-{"id": "offtopic-q06", "split": "test", "question": "What is the tallest mountain in the world?"}
-{"id": "offtopic-q07", "split": "test", "question": "How do you bake sourdough bread?"}
-{"id": "offtopic-q08", "split": "test", "question": "Who painted the Mona Lisa?"}
-{"id": "offtopic-q09", "split": "test", "question": "What is the difference between a stock and a bond?"}
-{"id": "offtopic-q10", "split": "test", "question": "How does a bill become a law in the United States?"}
-{"id": "offtopic-q11", "split": "test", "question": "What programming language is used for iOS apps?"}
-{"id": "offtopic-q12", "split": "test", "question": "When was the printing press invented?"}
-{"id": "offtopic-q13", "split": "test", "question": "What is the best way to train for a marathon?"}
-{"id": "offtopic-q14", "split": "test", "question": "Who was the first person to walk on the moon?"}
+{"id": "offtopic-q00", "split": "dev", "question": "What year did World War II end?"}
+{"id": "offtopic-q01", "split": "dev", "question": "What is the capital of Australia?"}
+{"id": "offtopic-q02", "split": "dev", "question": "Who wrote Pride and Prejudice?"}
+{"id": "offtopic-q03", "split": "dev", "question": "How do you reverse a linked list in Python?"}
+{"id": "offtopic-q04", "split": "dev", "question": "What causes inflation in an economy?"}
+{"id": "offtopic-q05", "split": "dev", "question": "How many players are on a soccer team?"}
+{"id": "offtopic-q06", "split": "dev", "question": "What is the tallest mountain in the world?"}
+{"id": "offtopic-q07", "split": "dev", "question": "How do you bake sourdough bread?"}
+{"id": "offtopic-q08", "split": "dev", "question": "Who painted the Mona Lisa?"}
+{"id": "offtopic-q09", "split": "dev", "question": "What is the difference between a stock and a bond?"}
+{"id": "offtopic-q10", "split": "dev", "question": "How does a bill become a law in the United States?"}
+{"id": "offtopic-q11", "split": "dev", "question": "What programming language is used for iOS apps?"}
+{"id": "offtopic-q12", "split": "dev", "question": "When was the printing press invented?"}
+{"id": "offtopic-q13", "split": "dev", "question": "What is the best way to train for a marathon?"}
+{"id": "offtopic-q14", "split": "dev", "question": "Who was the first person to walk on the moon?"}
+{"id": "offtopic-test-q00", "split": "test", "question": "What is the boiling point of water at sea level in Fahrenheit?"}
+{"id": "offtopic-test-q01", "split": "test", "question": "Who was the first president of the United States?"}
+{"id": "offtopic-test-q02", "split": "test", "question": "How do you change a flat tire?"}
+{"id": "offtopic-test-q03", "split": "test", "question": "What is the plot of Romeo and Juliet?"}
+{"id": "offtopic-test-q04", "split": "test", "question": "How does compound interest work on a savings account?"}
+{"id": "offtopic-test-q05", "split": "test", "question": "What are the rules of chess castling?"}
+{"id": "offtopic-test-q06", "split": "test", "question": "Which planet has the most moons?"}
+{"id": "offtopic-test-q07", "split": "test", "question": "How do you make a good cup of pour-over coffee?"}
+{"id": "offtopic-test-q08", "split": "test", "question": "What is the population of Tokyo?"}
+{"id": "offtopic-test-q09", "split": "test", "question": "Who composed the Four Seasons?"}
+{"id": "offtopic-test-q10", "split": "test", "question": "How do vaccines get approved by the FDA?"}
+{"id": "offtopic-test-q11", "split": "test", "question": "What is the offside rule in hockey?"}
+{"id": "offtopic-test-q12", "split": "test", "question": "How do you write a cover letter for a job?"}
+{"id": "offtopic-test-q13", "split": "test", "question": "What language is spoken in Brazil?"}
+{"id": "offtopic-test-q14", "split": "test", "question": "When did the Roman Empire fall?"}

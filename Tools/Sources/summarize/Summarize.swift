@@ -26,6 +26,9 @@ struct Summarize: AsyncParsableCommand {
     @Option(help: "Directory for summaries and summary_timings.csv.")
     var out: String
 
+    @Option(help: "Language model: qwen3-1.7b, qwen3-4b or qwen3.5-2b.")
+    var llm = "qwen3-1.7b"
+
     @Argument(help: "Transcript files (<name>.segments.json from `transcribe`).")
     var files: [String]
 
@@ -39,7 +42,9 @@ struct Summarize: AsyncParsableCommand {
 
         let clock = ContinuousClock()
         let loadStart = clock.now
-        let model = MLXTextGenerator.defaultModel
+        guard let model = MLXTextGenerator.candidates[llm] else {
+            throw ValidationError("Unknown --llm \(llm); use \(MLXTextGenerator.candidates.keys.sorted().joined(separator: ", ")).")
+        }
         let generator = try await MLXTextGenerator.load(model)
         log("Loaded \(model.name) in \(String(format: "%.1fs", (clock.now - loadStart).seconds))")
         let summarizer = MapReduceSummarizer(generator: generator)

@@ -158,7 +158,9 @@ latency further.
 - Passages and embeddings are stored by migration v4 with the embedding model's
   name, so vectors from different models never mix. Lectures are indexed when
   transcription finishes, and any missing ones when the Ask screen opens.
-- `ModelProvider` loads each model once; summaries and Q&A share the ~1 GB LLM.
+- `ModelProvider` loads each model once; summaries and Q&A share the LLM:
+  Qwen3-4B on Mac (better answers and summaries, ~2.5× slower), Qwen3-1.7B on
+  iPhone until memory there is measured.
 
 ### Imported files are copied into the app container
 Files from the picker are security-scoped. We copy them before processing so
